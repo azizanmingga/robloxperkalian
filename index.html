@@ -406,6 +406,18 @@
       gap: 8px;
       padding: 12px 16px;
       min-width: 280px;
+      transition: all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      overflow: hidden;
+    }
+
+    .party-scoreboard.minimized {
+      min-width: 215px;
+      padding: 8px 12px;
+      gap: 0;
+    }
+
+    .party-scoreboard.minimized .party-collapsible {
+      display: none !important;
     }
 
     .turn-banner {
@@ -413,10 +425,12 @@
       align-items: center;
       justify-content: space-between;
       background: linear-gradient(90deg, #4F46E5, #7C3AED);
-      padding: 6px 12px;
+      padding: 7px 12px;
       border-radius: 10px;
       font-size: 12px;
       font-weight: 900;
+      cursor: pointer;
+      gap: 8px;
     }
 
     .party-grid {
@@ -898,6 +912,79 @@
       animation: pulse 1s infinite;
     }
 
+    .timer-badge.paused {
+      background: #0284C7;
+      border: 1.5px solid #7DD3FC;
+      color: #E0F2FE;
+    }
+
+    /* Kotak Wacana Apersepsi & Ilustrasi Gambar Soal */
+    .apersepsi-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.95));
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .apersepsi-visual {
+      width: 112px;
+      height: 84px;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 4px;
+    }
+
+    .apersepsi-visual svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .apersepsi-content {
+      flex: 1;
+      text-align: left;
+    }
+
+    .apersepsi-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.2);
+      color: #7DD3FC;
+      font-size: 10.5px;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .apersepsi-text {
+      font-size: 12.5px;
+      color: #CBD5E1;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    @media (max-width: 560px) {
+      .apersepsi-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .apersepsi-visual {
+        width: 100%;
+        height: 92px;
+      }
+    }
+
     .question-box {
       font-size: 16px;
       font-weight: 800;
@@ -1374,20 +1461,23 @@
   <!-- HUD Layer -->
   <div id="hud">
     <div class="hud-top">
-      <!-- Papan Skor Online Real-Time & Info Ruangan -->
-      <div class="glass-card party-scoreboard interactive">
-        <div class="turn-banner">
-          <span>🌐 Kode Kelas: <strong id="hud-room-code" style="color:#FDE68A; letter-spacing:1px;">MATEMATIKA1</strong></span>
-          <span id="hud-online-count" style="font-size:11px; background:rgba(16,185,129,0.3); padding:2px 8px; border-radius:8px; border:1px solid #34D399;">🟢 1 Online</span>
+      <!-- Papan Skor Online Real-Time & Info Ruangan (Bisa Diminimize seperti Chat) -->
+      <div class="glass-card party-scoreboard interactive" id="party-scoreboard-widget">
+        <div class="turn-banner" onclick="toggleScoreboardWidget()" title="Klik untuk Minimize / Buka Daftar Pemain">
+          <span>🌐 Kelas: <strong id="hud-room-code" style="color:#FDE68A; letter-spacing:1px;">MATEMATIKA1</strong></span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span id="hud-online-count" style="font-size:11px; background:rgba(16,185,129,0.3); padding:2px 8px; border-radius:8px; border:1px solid #34D399;">🟢 1 Online</span>
+            <span id="scoreboard-toggle-icon" style="font-size:12px; color:#E2E8F0;">▼</span>
+          </div>
         </div>
-        <div style="font-size:11px; color:#A5B4FC; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+        <div class="party-collapsible" style="font-size:11px; color:#A5B4FC; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
           <span id="hud-my-stats">⭐ LVL 1 &bull; 0 Poin</span>
           <span id="hud-net-status" style="font-size:10px; color:#34D399;">📡 Live Sync Aktif</span>
         </div>
-        <div style="font-size:10px; color:#94a3b8; margin-top:-2px;">
-          💡 <em>Klik nama teman di bawah untuk menghampiri posisinya:</em>
+        <div class="party-collapsible" style="font-size:10px; color:#94a3b8; margin-top:-2px;">
+          💡 <em>Klik nama teman untuk menghampiri, atau klik header untuk minimize:</em>
         </div>
-        <div class="party-grid" id="hud-party-grid">
+        <div class="party-grid party-collapsible" id="hud-party-grid">
           <!-- Daftar pemain online dirender real-time -->
         </div>
       </div>
@@ -1528,22 +1618,34 @@
           </div>
 
           <div class="quiz-stats">
-            <div style="color:#34D399; font-size:13px;">Poin Benar: +25 Poin</div>
-            <div class="timer-badge" id="quiz-timer">⏱️ 45s</div>
+            <div style="color:#34D399; font-size:13px;">Poin Benar: +25 Poin &bull; Lewat Waktu: 0 Poin</div>
+            <div class="timer-badge" id="quiz-timer">⏱️ 60s</div>
+          </div>
+
+          <!-- Wacana Apersepsi & Ilustrasi Gambar Soal -->
+          <div class="apersepsi-card" id="quiz-apersepsi-box">
+            <div class="apersepsi-visual" id="quiz-apersepsi-svg"></div>
+            <div class="apersepsi-content">
+              <div class="apersepsi-badge">📖 Wacana Apersepsi &amp; Ilustrasi</div>
+              <div class="apersepsi-text" id="quiz-apersepsi-text">Memuat cerita pengantar...</div>
+            </div>
           </div>
 
           <div class="question-box" id="quiz-question">Pertanyaan kuis akan dimuat di sini...</div>
 
           <!-- Tombol Pelajari & Kotak Contoh Serupa -->
           <div class="study-helper-bar" id="quiz-study-bar">
-            <button type="button" class="btn-study-helper" onclick="toggleQuizStudyCard()">
-              <span>💡 Pelajari Cara Mengerjakan (Contoh Soal Serupa)</span>
+            <button type="button" class="btn-study-helper" id="btn-quiz-study-toggle" onclick="toggleQuizStudyCard()">
+              <span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>
             </button>
-            <span style="font-size:11px; color:#94a3b8; font-weight:700;">Buka jika butuh petunjuk langkah hitung!</span>
+            <span id="quiz-study-hint-label" style="font-size:11px; color:#7DD3FC; font-weight:700;">⏸️ Waktu berhenti saat belajar</span>
           </div>
 
           <div class="study-example-card" id="quiz-study-card">
-            <div class="study-example-title">📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</div>
+            <div class="study-example-title" style="justify-content: space-between;">
+              <span>📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</span>
+              <button type="button" onclick="toggleQuizStudyCard()" style="background:#0284C7; color:#fff; border:none; border-radius:6px; padding:3px 9px; font-size:11px; font-weight:800; cursor:pointer;">Tutup &amp; Lanjut Waktu ▶️</button>
+            </div>
             <div class="study-example-body" id="quiz-study-text"></div>
           </div>
 
@@ -1579,26 +1681,40 @@
           <div class="modal-icon">📜</div>
           <div>
             <div class="modal-title">Gulungan Angka Misterius Ditemukan!</div>
-            <div class="modal-subtitle">Jawab dengan benar untuk meraih +30 Poin Petualang</div>
+            <div class="modal-subtitle">Jawab dalam 60 detik untuk meraih +30 Poin Petualang</div>
           </div>
         </div>
         <button class="btn-close" onclick="closeModal('modal-scroll')">&times;</button>
       </div>
       <div class="modal-body">
         <div class="quiz-turn-banner">
-          <span>🎯 Penemu Gulungan: <strong id="scroll-player-name" style="color:#FDE68A;">Petualang</strong></span>
-          <span style="color:#34D399;">Hadiah: +30 Poin</span>
+          <span>🎯 Penemu: <strong id="scroll-player-name" style="color:#FDE68A;">Petualang</strong></span>
+          <span class="timer-badge" id="scroll-timer">⏱️ 60s</span>
         </div>
+
+        <!-- Wacana Apersepsi & Ilustrasi Gambar Gulungan -->
+        <div class="apersepsi-card" id="scroll-apersepsi-box">
+          <div class="apersepsi-visual" id="scroll-apersepsi-svg"></div>
+          <div class="apersepsi-content">
+            <div class="apersepsi-badge">📖 Wacana Apersepsi &amp; Ilustrasi</div>
+            <div class="apersepsi-text" id="scroll-apersepsi-text">Memuat cerita pengantar...</div>
+          </div>
+        </div>
+
         <div class="question-box" id="scroll-question">Pertanyaan gulungan...</div>
 
         <!-- Tombol Pelajari untuk Gulungan -->
         <div class="study-helper-bar">
-          <button type="button" class="btn-study-helper" onclick="toggleScrollStudyCard()">
-            <span>💡 Pelajari Cara Mengerjakan (Contoh Serupa)</span>
+          <button type="button" class="btn-study-helper" id="btn-scroll-study-toggle" onclick="toggleScrollStudyCard()">
+            <span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>
           </button>
+          <span id="scroll-study-hint-label" style="font-size:11px; color:#7DD3FC; font-weight:700;">⏸️ Waktu berhenti saat belajar</span>
         </div>
         <div class="study-example-card" id="scroll-study-card">
-          <div class="study-example-title">📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</div>
+          <div class="study-example-title" style="justify-content: space-between;">
+            <span>📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</span>
+            <button type="button" onclick="toggleScrollStudyCard()" style="background:#0284C7; color:#fff; border:none; border-radius:6px; padding:3px 9px; font-size:11px; font-weight:800; cursor:pointer;">Tutup &amp; Lanjut Waktu ▶️</button>
+          </div>
           <div class="study-example-body" id="scroll-study-text"></div>
         </div>
 
@@ -1743,6 +1859,10 @@
           <input type="text" class="form-input" id="teacher-q" placeholder="Contoh: Berapakah hasil dari 15 x 6?">
         </div>
         <div class="form-group">
+          <label>📖 Teks / Wacana Apersepsi Soal (Pengantar Kontekstual):</label>
+          <textarea class="form-textarea" rows="2" id="teacher-apersepsi" placeholder="Contoh: Di koperasi sekolah, setiap kotak berisi sejumlah alat tulis yang disusun rapi untuk kebutuhan siswa..."></textarea>
+        </div>
+        <div class="form-group">
           <label>💡 Contoh Cara Mengerjakan (Tombol Pelajari - Gunakan Angka Berbeda):</label>
           <textarea class="form-textarea" rows="2" id="teacher-study" placeholder="Contoh: Misal menghitung 14 x 5: Pisahkan puluhan dan satuan -> (10 x 5) + (4 x 5) = 50 + 20 = 70."></textarea>
         </div>
@@ -1871,16 +1991,48 @@
 
     /* =====================================================================
        2. KURIKULUM MATEMATIKA (PENJUMLAHAN, PENGURANGAN, PERKALIAN, PEMBAGIAN)
-          DILENGKAPI CONTOH CARA MENGERJAKAN (TOMBOL PELAJARI)
+          DILENGKAPI WACANA APERSEPSI, ILUSTRASI GAMBAR SVG, & CONTOH PELAJARI
        ===================================================================== */
+    function createMathIllustrationSVG(theme, badgeText, iconEmoji) {
+      const palettes = {
+        penjumlahan: { bg1: "#450A0A", bg2: "#991B1B", accent: "#F87171", op: "+" },
+        pengurangan: { bg1: "#172554", bg2: "#1D4ED8", accent: "#60A5FA", op: "−" },
+        perkalian:   { bg1: "#451A03", bg2: "#B45309", accent: "#FBBF24", op: "×" },
+        pembagian:   { bg1: "#2E1065", bg2: "#6D28D9", accent: "#C084FC", op: "÷" },
+        campuran:    { bg1: "#064E3B", bg2: "#047857", accent: "#34D399", op: "±" }
+      };
+      const pal = palettes[theme] || palettes.campuran;
+      return `
+        <svg viewBox="0 0 180 125" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad_${theme}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="${pal.bg1}"/>
+              <stop offset="100%" stop-color="${pal.bg2}"/>
+            </linearGradient>
+          </defs>
+          <rect width="180" height="125" rx="14" fill="url(#grad_${theme})"/>
+          <circle cx="150" cy="25" r="28" fill="${pal.accent}" opacity="0.18"/>
+          <circle cx="25" cy="105" r="32" fill="${pal.accent}" opacity="0.14"/>
+          <rect x="12" y="12" width="42" height="42" rx="10" fill="rgba(255,255,255,0.12)" stroke="${pal.accent}" stroke-width="1.5"/>
+          <text x="33" y="41" font-size="24" text-anchor="middle">${iconEmoji || "🧮"}</text>
+          <circle cx="144" cy="33" r="16" fill="${pal.accent}"/>
+          <text x="144" y="39" font-size="20" font-weight="900" fill="#0F172A" text-anchor="middle" font-family="Nunito, sans-serif">${pal.op}</text>
+          <rect x="12" y="68" width="156" height="44" rx="10" fill="rgba(15,23,42,0.78)" stroke="${pal.accent}" stroke-width="1.5"/>
+          <text x="90" y="95" font-size="15.5" font-weight="900" fill="#FDE047" text-anchor="middle" font-family="Nunito, sans-serif">${badgeText}</text>
+        </svg>
+      `;
+    }
+
     const defaultCurriculum = {
       penjumlahan: {
         title: "Pos 1: Penjumlahan (+)",
         icon: "➕",
         color: 0xEF4444,
-        materi: "Penjumlahan adalah cara menggabungkan dua atau lebih bilangan menjadi satu jumlah total. Trik Cepat: Kelompokkan Ratusan dengan Ratusan, Puluhan dengan Puluhan, dan Satuan dengan Satuan! Jika hasil satuan mencapai 10 atau lebih, simpan 1 ke puluhan.",
+        materi: "Penjumlahan adalah cara menggabungkan dua atau lebih kumpulan benda menjadi satu jumlah keseluruhan. Trik Cepat: Kelompokkan Ratusan dengan Ratusan, Puluhan dengan Puluhan, dan Satuan dengan Satuan! Jika jumlah satuan mencapai 10 atau lebih, simpan 1 puluhan.",
         quizzes: [
           {
+            apersepsi: "Saat panen buah di kebun desa, Keranjang Pertama berisi 47 apel merah segar dan Keranjang Kedua berisi 38 apel hijau manis. Petani ingin menggabungkan kedua keranjang tersebut.",
+            svg: createMathIllustrationSVG("penjumlahan", "47 + 38 = ?", "🍎"),
             q: "Berapakah hasil penjumlahan dari 47 + 38?",
             studyExample: "🎯 Contoh Serupa: Mari hitung 56 + 27!\n1. Jumlahkan puluhan: 50 + 20 = 70\n2. Jumlahkan satuan: 6 + 7 = 13\n3. Gabungkan keduanya: 70 + 13 = 83.\nSekarang gunakan cara yang sama untuk 47 + 38!",
             options: ["75", "85", "86", "95"],
@@ -1888,6 +2040,8 @@
             explain: "Puluhan: 40 + 30 = 70. Satuan: 7 + 8 = 15. Totalnya: 70 + 15 = 85."
           },
           {
+            apersepsi: "Perpustakaan SD Nusantara baru saja menerima kiriman buku bacaan baru. Rak sebelah kiri diisi 135 buku cerita bergambar dan rak sebelah kanan diisi 148 buku ensiklopedia sains.",
+            svg: createMathIllustrationSVG("penjumlahan", "135 + 148 Buku", "📚"),
             q: "Di perpustakaan sekolah terdapat 135 buku cerita dan 148 buku pengetahuan. Berapa jumlah seluruh buku tersebut?",
             studyExample: "🎯 Contoh Serupa: Misal ada 124 buku merah dan 159 buku biru.\n1. Ratusan: 100 + 100 = 200\n2. Puluhan: 20 + 50 = 70\n3. Satuan: 4 + 9 = 13\n4. Total: 200 + 70 + 13 = 283 buku.",
             options: ["273 buku", "283 buku", "293 buku", "285 buku"],
@@ -1895,6 +2049,8 @@
             explain: "135 + 148 -> Ratusan (100+100=200) + Puluhan (30+40=70) + Satuan (5+8=13) = 283 buku."
           },
           {
+            apersepsi: "Dalam lomba mengumpulkan koin amal sekolah, Kelas 5A berhasil mengumpulkan 264 koin dan Kelas 5B mengumpulkan 176 koin. Perhatikan angka satuannya yang saling melengkapi menjadi puluhan!",
+            svg: createMathIllustrationSVG("penjumlahan", "264 + 176 = ?", "🪙"),
             q: "Berapakah hasil dari 264 + 176?",
             studyExample: "🎯 Contoh Serupa: Hitung 342 + 188!\n1. Perhatikan satuannya pas menjadi 10: 2 + 8 = 10.\n2. Puluhan: 40 + 80 = 120.\n3. Ratusan: 300 + 100 = 400.\n4. Jumlahkan semua: 400 + 120 + 10 = 530.",
             options: ["430", "440", "450", "340"],
@@ -1902,6 +2058,8 @@
             explain: "Satuan: 4 + 6 = 10. Puluhan: 60 + 70 = 130. Ratusan: 200 + 100 = 300. Total: 300 + 130 + 10 = 440."
           },
           {
+            apersepsi: "Tiga kelompok petani memanen buah mangga harum manis dari tiga blok kebun yang berbeda. Kamu bisa menjumlahkan dua angka yang menghasilkan bilangan bulat 100 terlebih dahulu agar lebih cepat!",
+            svg: createMathIllustrationSVG("penjumlahan", "75 + 25 + 49", "🥭"),
             q: "Panitia memanen 75 buah mangga di kebun A, 25 buah di kebun B, dan 49 buah di kebun C. Berapa total mangga yang dipanen?",
             studyExample: "🎯 Contoh Serupa: Hitung 65 + 35 + 42!\n1. Cari pasangan angka yang menghasilkan ratusan bulat dulu: 65 + 35 = 100.\n2. Baru tambahkan angka ketiga: 100 + 42 = 142.",
             options: ["139 buah", "149 buah", "159 buah", "145 buah"],
@@ -1914,9 +2072,11 @@
         title: "Pos 2: Pengurangan (-)",
         icon: "➖",
         color: 0x3B82F6,
-        materi: "Pengurangan adalah mencari selisih atau sisa setelah suatu bilangan diambil sebagian. Trik Mudah: Kurangi dari nilai tempat satuan terlebih dahulu. Jika angka satuan di atas lebih kecil, pinjam 1 puluhan (nilainya 10) dari angka di depannya!",
+        materi: "Pengurangan digunakan untuk menghitung sisa benda setelah diambil atau mencari selisih antara dua nilai. Trik Mudah: Kurangi bertahap dari puluhan lalu satuannya, atau gunakan teknik meminjam 1 puluhan!",
         quizzes: [
           {
+            apersepsi: "Seorang peternak mengumpulkan 92 butir telur ayam di pagi hari. Sebanyak 37 butir telur telah terjual di pasar tradisional. Mari hitung berapa butir telur yang masih tersisa!",
+            svg: createMathIllustrationSVG("pengurangan", "92 − 37 = ?", "🥚"),
             q: "Berapakah hasil pengurangan dari 92 - 37?",
             studyExample: "🎯 Contoh Serupa: Mari hitung 83 - 26!\n1. Karena satuan 3 tidak cukup dikurangi 6, pinjam 1 puluhan dari 80 (80 sisa 70, satuan menjadi 13).\n2. Kurangi satuan: 13 - 6 = 7.\n3. Kurangi puluhan: 70 - 20 = 50.\n4. Gabungkan: 50 + 7 = 57.",
             options: ["55", "65", "53", "45"],
@@ -1924,6 +2084,8 @@
             explain: "Pinjam 1 puluhan dari 90 menjadi 80 dan satuan menjadi 12. Lalu (12 - 7 = 5) dan (80 - 30 = 50). Hasilnya 55."
           },
           {
+            apersepsi: "Pada acara festival taman kota, seorang penjual balon udara membawa 150 balon warna-warni. Anak-anak membeli 64 balon dengan gembira.",
+            svg: createMathIllustrationSVG("pengurangan", "150 − 64 Balon", "🎈"),
             q: "Seorang pedagang membawa 150 balon. Di perjalanan, 64 balon terjual kepada anak-anak. Berapa sisa balon pedagang itu?",
             studyExample: "🎯 Contoh Serupa: Hitung 140 - 52!\n1. Kurangi puluhan bulat dulu: 140 - 50 = 90.\n2. Kurangi sisanya (satuan): 90 - 2 = 88.\nCara bertahap ini sangat mudah tanpa takut salah meminjam!",
             options: ["76 balon", "86 balon", "96 balon", "84 balon"],
@@ -1931,6 +2093,8 @@
             explain: "Kurangi puluhan dulu: 150 - 60 = 90. Lalu kurangi satuannya: 90 - 4 = 86 balon."
           },
           {
+            apersepsi: "Mengurangi bilangan ratusan bulat (seperti 300) sering membuat bingung saat meminjam dari angka nol. Dengan trik mengurangi 1 pada kedua bilangan, perhitungan menjadi bebas pinjam!",
+            svg: createMathIllustrationSVG("pengurangan", "300 − 145 = ?", "🎯"),
             q: "Berapakah hasil dari 300 - 145?",
             studyExample: "🎯 Contoh Serupa: Hitung 400 - 165!\nTrik Kurangi 1: Kurangi kedua angka dengan 1 agar tidak perlu meminjam dari nol!\n• 400 - 1 = 399\n• 165 - 1 = 164\n• Tinggal kurangi: 399 - 164 = 235!",
             options: ["145", "155", "165", "255"],
@@ -1938,6 +2102,8 @@
             explain: "Gunakan trik kurangi 1: (300 - 1 = 299) dikurangi (145 - 1 = 144) -> 299 - 144 = 155."
           },
           {
+            apersepsi: "Dalam pertandingan cerdas cermat antar regu, Papan Skor menunjukkan Tim Merah meraih 240 poin dan Tim Biru meraih 175 poin. Berapa jarak poin di antara kedua tim?",
+            svg: createMathIllustrationSVG("pengurangan", "Selisih 240 & 175", "🏆"),
             q: "Skor tim Merah adalah 240 poin, sedangkan skor tim Biru adalah 175 poin. Berapakah selisih skor kedua tim?",
             studyExample: "🎯 Contoh Serupa: Cari selisih 230 dan 185 (230 - 185)!\n1. Hitung jarak dari 185 menuju 200 -> butuh +15.\n2. Hitung jarak dari 200 menuju 230 -> butuh +30.\n3. Jumlahkan jaraknya: 15 + 30 = 45.",
             options: ["55 poin", "65 poin", "75 poin", "85 poin"],
@@ -1950,9 +2116,11 @@
         title: "Pos 3: Perkalian (×)",
         icon: "✖️",
         color: 0xF59E0B,
-        materi: "Perkalian adalah penjumlahan berulang dari bilangan yang sama. Untuk angka belasan atau puluhan, gunakan Sifat Distributif (pecah menjadi puluhan dan satuan lalu kalikan masing-masing)!",
+        materi: "Perkalian adalah penjumlahan berulang dari kelompok benda yang jumlahnya sama banyak. Untuk angka belasan atau puluhan, pecah menjadi Puluhan dan Satuan lalu kalikan masing-masing (Sifat Distributif)!",
         quizzes: [
           {
+            apersepsi: "Di kebun bunga sekolah terdapat 8 baris pot tanaman. Setiap baris memiliki 7 pot bunga matahari yang mekar bersamaan.",
+            svg: createMathIllustrationSVG("perkalian", "8 Baris × 7 Pot", "🌻"),
             q: "Berapakah hasil perkalian dari 8 × 7?",
             studyExample: "🎯 Contoh Serupa: Cara mudah menghitung 8 × 6 jika lupa hafalan:\n1. Kita tahu 5 × 6 = 30 dan 3 × 6 = 18.\n2. Karena 8 adalah (5 + 3), maka tambahkan hasilnya: 30 + 18 = 48!\nSekarang coba pecah 8 × 7 menjadi (5 × 7) + (3 × 7)!",
             options: ["54", "56", "58", "64"],
@@ -1960,6 +2128,8 @@
             explain: "(5 × 7 = 35) ditambah (3 × 7 = 21) -> 35 + 21 = 56."
           },
           {
+            apersepsi: "Aula pertemuan sekolah menata 14 meja belajar kelompok. Setiap meja dikelilingi oleh 6 siswa yang sedang berdiskusi.",
+            svg: createMathIllustrationSVG("perkalian", "14 Meja × 6 Siswa", "🪑"),
             q: "Di ruang kelas terdapat 14 meja. Setiap meja ditempati oleh 6 siswa. Berapa jumlah seluruh siswa di kelas itu?",
             studyExample: "🎯 Contoh Serupa: Mari hitung 13 × 5!\n1. Pecah angka 13 menjadi (10 + 3).\n2. Kalikan puluhan: 10 × 5 = 50.\n3. Kalikan satuan: 3 × 5 = 15.\n4. Jumlahkan: 50 + 15 = 65.",
             options: ["74 siswa", "84 siswa", "94 siswa", "86 siswa"],
@@ -1967,13 +2137,17 @@
             explain: "14 × 6 -> Pecah menjadi (10 × 6) + (4 × 6) = 60 + 24 = 84 siswa."
           },
           {
+            apersepsi: "Koperasi sekolah memesan 12 pak buku gambar. Setiap pak berisi 25 buku gambar. Ingat bahwa bilangan 25 sangat mudah dikalikan dengan kelipatan 4 atau dipecah menjadi puluhan!",
+            svg: createMathIllustrationSVG("perkalian", "25 × 12 Pak", "📦"),
             q: "Berapakah hasil dari 25 × 12?",
-            studyExample: "🎯 Contoh Serupa: Hitung 25 × 8 dengan trik lipat & bagi dua!\n1. Ingat bahwa 25 × 4 = 100.\n2. Karena 8 adalah 4 × 2, maka 25 × 8 = 100 × 2 = 200!\nCoba gunakan kelipatan 25 × 4 = 100 untuk menghitung 25 × 12!",
+            studyExample: "🎯 Contoh Serupa: Hitung 25 × 8 dengan trik lipat & bagi dua!\n1. Ingat bahwa 25 × 4 = 100.\n2. Karena 8 adalah 4 × 2, maka 25 × 8 = 100 × 2 = 200!\nAtau pecah pengalinya menjadi puluhan dan satuan.",
             options: ["250", "300", "325", "350"],
             answer: 1,
             explain: "Pecah 12 menjadi 10 + 2: (25 × 10 = 250) + (25 × 2 = 50) = 300."
           },
           {
+            apersepsi: "Sebuah mobil boks mengangkut 9 peti buah jeruk segar dari petani. Tiap peti berisi tepat 45 buah jeruk. Gunakan trik perkalian 10 dikurangi 1 kali untuk menghitung cepat!",
+            svg: createMathIllustrationSVG("perkalian", "9 Peti × 45 Jeruk", "🍊"),
             q: "Sebuah truk mengangkut 9 kotak jeruk. Setiap kotak berisi 45 buah jeruk. Berapa total jeruk yang diangkut truk tersebut?",
             studyExample: "🎯 Contoh Serupa: Trik cepat perkalian 9, misal 9 × 35:\n1. Kalikan dulu dengan 10: 10 × 35 = 350.\n2. Kurangi dengan 1 kali angka itu sendiri (35): 350 - 35 = 315.\nMudah sekali kan? Sekarang coba untuk 9 × 45!",
             options: ["395 jeruk", "405 jeruk", "415 jeruk", "425 jeruk"],
@@ -1986,9 +2160,11 @@
         title: "Pos 4: Pembagian (÷)",
         icon: "➗",
         color: 0x8B5CF6,
-        materi: "Pembagian adalah pengurangan berulang atau kebalikan langsung dari perkalian! Jika A × B = C, maka C ÷ B = A. Untuk angka besar, pecah angka yang dibagi menjadi bagian bulat yang mudah dibagi.",
+        materi: "Pembagian adalah membagi suatu jumlah benda secara adil dan sama rata ke beberapa kelompok, atau kebalikan dari perkalian (Jika A × B = C, maka C ÷ B = A). Pecah bilangan besar agar mudah dibagi!",
         quizzes: [
           {
+            apersepsi: "Sebanyak 72 kelereng kaca akan dimasukkan sama rata ke dalam 8 kantong kecil. Ingat kembali perkalian 8 untuk menemukan isinya dengan cepat!",
+            svg: createMathIllustrationSVG("pembagian", "72 ÷ 8 Kantong", "🔮"),
             q: "Berapakah hasil pembagian dari 72 ÷ 8?",
             studyExample: "🎯 Contoh Serupa: Mari cari hasil 63 ÷ 7!\n1. Ingat kebalikan perkalian: 7 dikali berapa yang hasilnya 63?\n2. Kita tahu 7 × 10 = 70 (kelebihan 7), berarti mundur 1 langkah: 7 × 9 = 63.\n3. Jadi 63 ÷ 7 = 9.",
             options: ["7", "8", "9", "10"],
@@ -1996,6 +2172,8 @@
             explain: "Karena 8 × 9 = 72, maka 72 ÷ 8 = 9."
           },
           {
+            apersepsi: "Dalam kegiatan melukis bersama, Ibu Guru menyiapkan 96 pensil warna untuk dibagikan secara adil kepada 6 kelompok belajar di kelas.",
+            svg: createMathIllustrationSVG("pembagian", "96 ÷ 6 Kelompok", "🖍️"),
             q: "Ibu Guru memiliki 96 pensil warna yang akan dibagikan sama rata kepada 6 kelompok belajar. Berapa pensil yang diterima setiap kelompok?",
             studyExample: "🎯 Contoh Serupa: Hitung 84 ÷ 6 dengan cara memecah angka!\n1. Pecah 84 menjadi angka puluhan yang habis dibagi 6, yaitu 60 + 24.\n2. Bagi bagian pertama: 60 ÷ 6 = 10.\n3. Bagi bagian kedua: 24 ÷ 6 = 4.\n4. Jumlahkan hasilnya: 10 + 4 = 14.",
             options: ["14 pensil", "15 pensil", "16 pensil", "18 pensil"],
@@ -2003,6 +2181,8 @@
             explain: "Pecah 96 menjadi 60 + 36. Lalu (60 ÷ 6 = 10) ditambah (36 ÷ 6 = 6) = 16 pensil."
           },
           {
+            apersepsi: "Panitia menyiapkan 135 bibit pohon pelindung yang akan ditanam secara merata di 9 taman kota. Pecah angka 135 menjadi 90 ditambah sisanya!",
+            svg: createMathIllustrationSVG("pembagian", "135 ÷ 9 Taman", "🌱"),
             q: "Berapakah hasil dari 135 ÷ 9?",
             studyExample: "🎯 Contoh Serupa: Hitung 126 ÷ 9!\n1. Pecah 126 menjadi 90 + 36 (karena 90 adalah 9 × 10).\n2. 90 ÷ 9 = 10.\n3. 36 ÷ 9 = 4.\n4. Totalnya: 10 + 4 = 14.",
             options: ["13", "14", "15", "16"],
@@ -2010,6 +2190,8 @@
             explain: "Pecah 135 menjadi 90 + 45. Lalu (90 ÷ 9 = 10) + (45 ÷ 9 = 5) = 15."
           },
           {
+            apersepsi: "Rombongan karya wisata sekolah yang berjumlah 180 siswa akan diberangkatkan menuju museum menggunakan 5 bus pariwisata berkapasitas sama.",
+            svg: createMathIllustrationSVG("pembagian", "180 Siswa ÷ 5 Bus", "🚌"),
             q: "Sebanyak 180 siswa akan berangkat karya wisata menggunakan 5 bus dengan kapasitas sama banyak. Berapa siswa di setiap bus?",
             studyExample: "🎯 Contoh Serupa: Hitung 160 ÷ 5!\n1. Pecah 160 menjadi 100 + 60.\n2. 100 ÷ 5 = 20.\n3. 60 ÷ 5 = 12.\n4. Jumlahkan keduanya: 20 + 12 = 32.",
             options: ["32 siswa", "34 siswa", "36 siswa", "38 siswa"],
@@ -2022,9 +2204,11 @@
         title: "Pos 5: Operasi Campuran & Cerita",
         icon: "🏛️",
         color: 0x10B981,
-        materi: "Aturan Emas Operasi Hitung Campuran (KABATAKU):1) Kerjakan di dalam Tanda Kurung ( ) terlebih dahulu. 2) Kerjakan Perkalian (×) atau Pembagian (÷) sebelum Penjumlahan (+) dan Pengurangan (-). 3) Jika setara, kerjakan dari kiri ke kanan!",
+        materi: "Aturan Emas Operasi Hitung Campuran (KABATAKU): 1) Kerjakan di dalam Tanda Kurung ( ) terlebih dahulu. 2) Kerjakan Perkalian (×) atau Pembagian (÷) sebelum Penjumlahan (+) dan Pengurangan (-). 3) Jika setara, kerjakan dari kiri ke kanan!",
         quizzes: [
           {
+            apersepsi: "Di atas meja sudah ada 20 kelereng, lalu Andi menambahkan 6 kantong baru yang masing-masing berisi 8 kelereng. Ingat aturan prioritas: kalikan dulu sebelum menjumlahkan!",
+            svg: createMathIllustrationSVG("campuran", "20 + (6 × 8)", "⚖️"),
             q: "Berapakah hasil dari 20 + 6 × 8?",
             studyExample: "🎯 Contoh Serupa: Hitung 15 + 4 × 7!\n⚠️ Ingat aturan: Perkalian lebih kuat daripada Penjumlahan!\n1. Kerjakan perkalian dulu: 4 × 7 = 28.\n2. Baru tambahkan dengan angka depan: 15 + 28 = 43.\n(Jangan menjumlahkan 15 + 4 dulu ya!)",
             options: ["208", "68", "78", "58"],
@@ -2032,6 +2216,8 @@
             explain: "Kerjakan perkalian lebih dulu: 6 × 8 = 48. Kemudian tambahkan: 20 + 48 = 68."
           },
           {
+            apersepsi: "Jika terdapat tanda kurung ( ) pada soal matematika, maka operasi di dalam tanda kurung wajib diselesaikan paling pertama, dilanjutkan pembagian, lalu penjumlahan.",
+            svg: createMathIllustrationSVG("campuran", "(45 − 15) ÷ 5 + 12", "🧩"),
             q: "Hitunglah hasil dari (45 - 15) ÷ 5 + 12!",
             studyExample: "🎯 Contoh Serupa: Hitung (36 - 12) ÷ 4 + 10!\n1. Kerjakan dalam kurung dulu: 36 - 12 = 24.\n2. Lanjutkan pembagian: 24 ÷ 4 = 6.\n3. Terakhir jumlahkan: 6 + 10 = 16.",
             options: ["16", "18", "20", "24"],
@@ -2039,6 +2225,8 @@
             explain: "Dalam kurung: (45 - 15) = 30. Lalu bagi: 30 ÷ 5 = 6. Terakhir tambah: 6 + 12 = 18."
           },
           {
+            apersepsi: "Menjelang tahun ajaran baru, Budi membeli 4 pak buku tulis di toko koperasi. Setelah dihitung total bukunya, Budi berbagi 7 buku kepada adiknya di rumah.",
+            svg: createMathIllustrationSVG("campuran", "(4 × 10) − 7 Buku", "📓"),
             q: "Budi membeli 4 pak buku tulis. Setiap pak berisi 10 buku. Kemudian ia memberikan 7 buku kepada adiknya. Berapa buku Budi sekarang?",
             studyExample: "🎯 Contoh Serupa: Lani membeli 3 kotak pensil (tiap kotak isi 12), lalu memberikan 5 pensil ke temannya.\n1. Kalikan total awal: 3 × 12 = 36 pensil.\n2. Kurangi yang diberikan: 36 - 5 = 31 pensil.",
             options: ["31 buku", "33 buku", "35 buku", "47 buku"],
@@ -2046,6 +2234,8 @@
             explain: "Total buku yang dibeli: 4 × 10 = 40 buku. Dikurangi 7 buku untuk adiknya: 40 - 7 = 33 buku."
           },
           {
+            apersepsi: "Ibu membuat 100 kue donat coklat yang lezat. Sebanyak 28 donat disajikan untuk keluarga, lalu sisa donat dikemas sama rata ke dalam 9 kotak pesanan.",
+            svg: createMathIllustrationSVG("campuran", "(100 − 28) ÷ 9", "🍩"),
             q: "Ibu membuat 100 kue donat. Sebanyak 28 donat dimakan keluarga di rumah, dan sisanya dimasukkan sama rata ke dalam 9 kotak. Berapa isi tiap kotak?",
             studyExample: "🎯 Contoh Serupa: Ada 80 jeruk, 20 dimakan, sisanya dibagi ke 6 keranjang.\n1. Cari sisa jeruk dulu: 80 - 20 = 60 jeruk.\n2. Bagi rata ke keranjang: 60 ÷ 6 = 10 jeruk per keranjang.",
             options: ["6 donat", "7 donat", "8 donat", "9 donat"],
@@ -2056,9 +2246,11 @@
       }
     };
 
-    // Bank Soal 12 Gulungan Matematika di Dunia 3D (Dilengkapi Contoh Cara Mengerjakan / Study Example)
+    // Bank Soal 12 Gulungan Matematika di Dunia 3D (Dilengkapi Apersepsi, Gambar SVG & Contoh Pelajari)
     const worldScrollChallenges = [
       {
+        apersepsi: "Dua regu pramuka mengumpulkan ranting kayu kering untuk api unggun. Regu Elang mengumpulkan 68 ranting dan Regu Rajawali mengumpulkan 57 ranting.",
+        svg: createMathIllustrationSVG("penjumlahan", "68 + 57 = ?", "🪵"),
         q: "📜 GULUNGAN #1 (Penjumlahan): Berapakah hasil dari 68 + 57?",
         studyExample: "🎯 Contoh Serupa: Hitung 78 + 46!\n• Puluhan: 70 + 40 = 110\n• Satuan: 8 + 6 = 14\n• Total: 110 + 14 = 124.",
         options: ["115", "125", "135", "126"],
@@ -2066,6 +2258,8 @@
         explain: "Puluhan: 60 + 50 = 110. Satuan: 8 + 7 = 15. Total: 110 + 15 = 125."
       },
       {
+        apersepsi: "Sebuah toko roti memanggang 120 roti manis di pagi hari. Menjelang siang, 48 roti telah dibeli oleh pelanggan.",
+        svg: createMathIllustrationSVG("pengurangan", "120 − 48 Roti", "🥐"),
         q: "📜 GULUNGAN #2 (Pengurangan): Berapakah hasil dari 120 - 48?",
         studyExample: "🎯 Contoh Serupa: Hitung 130 - 56!\n• Kurangi puluhan dulu: 130 - 50 = 80.\n• Kurangi satuannya: 80 - 6 = 74.",
         options: ["62", "72", "82", "78"],
@@ -2073,6 +2267,8 @@
         explain: "120 - 40 = 80, lalu 80 - 8 = 72."
       },
       {
+        apersepsi: "Di lapangan parkir sekolah berjajar 9 barisan sepeda siswa. Setiap barisan terdiri dari 8 sepeda yang diparkir rapi.",
+        svg: createMathIllustrationSVG("perkalian", "9 Baris × 8 Sepeda", "🚲"),
         q: "📜 GULUNGAN #3 (Perkalian): Berapakah hasil dari 9 × 8?",
         studyExample: "🎯 Contoh Serupa: Hitung 9 × 6!\n• Kalikan 10 dulu: 10 × 6 = 60.\n• Kurangi 6: 60 - 6 = 54.",
         options: ["64", "72", "81", "74"],
@@ -2080,6 +2276,8 @@
         explain: "(10 × 8) - 8 = 80 - 8 = 72."
       },
       {
+        apersepsi: "Terdapat 84 bibit bunga mawar yang akan ditanam sama banyak ke dalam 7 petak taman sekolah.",
+        svg: createMathIllustrationSVG("pembagian", "84 ÷ 7 Petak", "🌹"),
         q: "📜 GULUNGAN #4 (Pembagian): Berapakah hasil dari 84 ÷ 7?",
         studyExample: "🎯 Contoh Serupa: Hitung 78 ÷ 6!\n• Pecah 78 menjadi 60 + 18.\n• (60 ÷ 6 = 10) + (18 ÷ 6 = 3) = 13.",
         options: ["11", "12", "13", "14"],
@@ -2087,6 +2285,8 @@
         explain: "Pecah 84 menjadi 70 + 14. (70 ÷ 7 = 10) + (14 ÷ 7 = 2) = 12."
       },
       {
+        apersepsi: "Museum Kota dikunjungi 185 wisatawan pada hari Sabtu dan 115 wisatawan pada hari Minggu. Perhatikan bahwa 85 dan 15 pas membentuk 100!",
+        svg: createMathIllustrationSVG("penjumlahan", "185 + 115 = ?", "🎟️"),
         q: "📜 GULUNGAN #5 (Penjumlahan): Berapakah hasil dari 185 + 115?",
         studyExample: "🎯 Contoh Serupa: Hitung 275 + 125!\n• Ratusan: 200 + 100 = 300.\n• Puluhan & satuan: 75 + 25 = 100.\n• Total: 300 + 100 = 400.",
         options: ["290", "300", "310", "280"],
@@ -2094,6 +2294,8 @@
         explain: "100 + 100 = 200, dan 85 + 15 = 100. Jadi 200 + 100 = 300."
       },
       {
+        apersepsi: "Sebuah tangki penampungan berisi 250 liter air bersih. Sebanyak 85 liter air digunakan untuk menyiram tanaman di taman sekolah.",
+        svg: createMathIllustrationSVG("pengurangan", "250 − 85 Liter", "💧"),
         q: "📜 GULUNGAN #6 (Pengurangan): Berapakah hasil dari 250 - 85?",
         studyExample: "🎯 Contoh Serupa: Hitung 240 - 75!\n• 240 - 70 = 170.\n• 170 - 5 = 165.",
         options: ["155", "165", "175", "145"],
@@ -2101,6 +2303,8 @@
         explain: "250 - 80 = 170, kemudian 170 - 5 = 165."
       },
       {
+        apersepsi: "Setiap kotak krayon berisi 16 batang warna. Siti membeli 5 kotak krayon untuk hadiah lomba menggambar.",
+        svg: createMathIllustrationSVG("perkalian", "16 × 5 Kotak", "🎨"),
         q: "📜 GULUNGAN #7 (Perkalian): Berapakah hasil dari 16 × 5?",
         studyExample: "🎯 Contoh Serupa: Hitung 18 × 5!\n• Pecah 18 menjadi 10 + 8.\n• (10 × 5 = 50) + (8 × 5 = 40) = 90.",
         options: ["70", "75", "80", "85"],
@@ -2108,6 +2312,8 @@
         explain: "(10 × 5 = 50) + (6 × 5 = 30) = 80."
       },
       {
+        apersepsi: "Sebanyak 144 botol susu segar akan disusun secara merata ke dalam 12 krat penyimpanan.",
+        svg: createMathIllustrationSVG("pembagian", "144 ÷ 12 Krat", "🥛"),
         q: "📜 GULUNGAN #8 (Pembagian): Berapakah hasil dari 144 ÷ 12?",
         studyExample: "🎯 Contoh Serupa: Hitung 132 ÷ 12!\n• Pecah 132 menjadi 120 + 12.\n• (120 ÷ 12 = 10) + (12 ÷ 12 = 1) = 11.",
         options: ["11", "12", "13", "14"],
@@ -2115,6 +2321,8 @@
         explain: "Pecah 144 menjadi 120 + 24. (120 ÷ 12 = 10) + (24 ÷ 12 = 2) = 12."
       },
       {
+        apersepsi: "Rani membawa uang 50 koin emas. Ia membeli 7 tiket wahana yang masing-masing berharga 5 koin emas. Hitung total harga tiketnya terlebih dahulu!",
+        svg: createMathIllustrationSVG("campuran", "50 − (7 × 5)", "🎡"),
         q: "📜 GULUNGAN #9 (Operasi Campuran): Berapakah hasil dari 50 - 7 × 5?",
         studyExample: "🎯 Contoh Serupa: Hitung 40 - 6 × 4!\n• Kerjakan perkalian dulu: 6 × 4 = 24.\n• Baru kurangi: 40 - 24 = 16.",
         options: ["15", "25", "215", "35"],
@@ -2122,6 +2330,8 @@
         explain: "Kalikan dulu 7 × 5 = 35. Lalu kurangi: 50 - 35 = 15."
       },
       {
+        apersepsi: "Lemari kaca di ruang kepala sekolah memiliki 7 tingkat rak. Setiap tingkat memajang 15 piala kejuaraan siswa.",
+        svg: createMathIllustrationSVG("perkalian", "7 Rak × 15 Piala", "🏆"),
         q: "📜 GULUNGAN #10 (Perkalian Cerita): Sebuah rak memiliki 7 baris. Setiap baris memuat 15 piala. Berapa total piala di rak itu?",
         studyExample: "🎯 Contoh Serupa: 6 baris × 14 piala:\n• (6 × 10 = 60) + (6 × 4 = 24) = 84 piala.",
         options: ["95 piala", "105 piala", "115 piala", "100 piala"],
@@ -2129,6 +2339,8 @@
         explain: "7 × 15 = (7 × 10) + (7 × 5) = 70 + 35 = 105 piala."
       },
       {
+        apersepsi: "Ayah baru saja memanen 108 buah jeruk manis dari kebun belakang dan ingin membaginya sama rata ke dalam 9 kantong ramah lingkungan.",
+        svg: createMathIllustrationSVG("pembagian", "108 ÷ 9 Kantong", "🍊"),
         q: "📜 GULUNGAN #11 (Pembagian Cerita): Ayah memetik 108 buah jeruk dan membaginya sama rata ke dalam 9 kantong. Berapa jeruk di tiap kantong?",
         studyExample: "🎯 Contoh Serupa: 96 jeruk dibagi ke 8 kantong:\n• Pecah 96 = 80 + 16.\n• (80 ÷ 8 = 10) + (16 ÷ 8 = 2) = 12 jeruk.",
         options: ["11 jeruk", "12 jeruk", "13 jeruk", "14 jeruk"],
@@ -2136,6 +2348,8 @@
         explain: "108 ÷ 9 -> Pecah menjadi (90 ÷ 9 = 10) + (18 ÷ 9 = 2) = 12 jeruk."
       },
       {
+        apersepsi: "Di setiap kelompok belajar terdapat 18 siswa laki-laki dan 22 siswa perempuan. Terdapat 3 kelompok belajar dengan komposisi yang sama.",
+        svg: createMathIllustrationSVG("campuran", "(18 + 22) × 3", "👥"),
         q: "📜 GULUNGAN #12 (Operasi Campuran): Berapakah hasil dari (18 + 22) × 3?",
         studyExample: "🎯 Contoh Serupa: Hitung (14 + 16) × 4!\n• Kerjakan dalam kurung dulu: 14 + 16 = 30.\n• Kalikan: 30 × 4 = 120.",
         options: ["100", "110", "120", "130"],
@@ -2626,20 +2840,19 @@
       ctx.stroke();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 35px Nunito, sans-serif';
+      ctx.font = 'bold 34px Nunito, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(titleText, 256, 80);
       return new THREE.CanvasTexture(c);
     }
 
-    // 5 Pos Gedung Tantangan Matematika
     const buildingData = [
       { key: "penjumlahan", name: "Pos 1: Penjumlahan (+)", color: 0xEF4444, hex: "#EF4444", pos: [40, 0, 40], rot: -Math.PI / 4, icon: "➕" },
       { key: "pengurangan", name: "Pos 2: Pengurangan (-)", color: 0x3B82F6, hex: "#3B82F6", pos: [-40, 0, 40], rot: Math.PI / 4, icon: "➖" },
       { key: "perkalian", name: "Pos 3: Perkalian (×)", color: 0xF59E0B, hex: "#F59E0B", pos: [-40, 0, -40], rot: 3 * Math.PI / 4, icon: "✖️" },
       { key: "pembagian", name: "Pos 4: Pembagian (÷)", color: 0x8B5CF6, hex: "#8B5CF6", pos: [40, 0, -40], rot: -3 * Math.PI / 4, icon: "➗" },
-      { key: "campuran", name: "Pos 5: Hitung Campuran", color: 0x10B981, hex: "#10B981", pos: [0, 0, -56], rot: Math.PI, icon: "🏛️" }
+      { key: "campuran", name: "Pos 5: Operasi Campuran", color: 0x10B981, hex: "#10B981", pos: [0, 0, -56], rot: Math.PI, icon: "🏛️" }
     ];
 
     buildingData.forEach(b => {
@@ -2763,8 +2976,8 @@
       npcs.push({ group: npcGroup, exMesh: exMesh });
     }
 
-    createNPC("Pak Budi (Guru Matematika)", 11, 12, "Saat mengerjakan soal di Pos maupun Gulungan, tekan tombol '💡 Pelajari Cara Mengerjakan' untuk melihat contoh soal serupa beserta langkah hitungnya!");
-    createNPC("Rani (Penjaga Sertifikat)", -11, 12, "Kumpulkan 12 Gulungan Angka di jalanan kota dan taklukkan 5 Pos Matematika! Peraih skor tertinggi bisa langsung mengunduh Sertifikat Juara PNG & PDF!");
+    createNPC("Pak Budi (Guru Matematika)", 11, 12, "Gunakan tombol 💡 Pelajari saat menjawab soal! Waktu akan otomatis berhenti sementara agar kamu bisa mempelajari cara menghitungnya dengan tenang.");
+    createNPC("Kak Rani (Penjaga Sertifikat)", -11, 12, "Kumpulkan 12 Gulungan Angka di jalanan kota dan selesaikan 5 Pos Matematika! Peraih skor tertinggi bisa mengunduh Sertifikat Juara PNG & PDF!");
 
     /* =====================================================================
        5. KARAKTER PEMAIN LOKAL & PEMAIN MULTIPLAYER ONLINE 3D
@@ -2798,7 +3011,7 @@
       ctx.strokeStyle = isChampion ? '#FBBF24' : (borderColor || '#38BDF8');
       ctx.stroke();
 
-      ctx.fillStyle = '#F7E43B';
+      ctx.fillStyle = '#FFFFFF';
       ctx.font = '900 23px Nunito, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -3387,51 +3600,141 @@
     }
 
     /* =====================================================================
-       8. SISTEM MODAL POS KUIS, TOMBOL PELAJARI & GULUNGAN MATEMATIKA
+       8. SISTEM MODAL POS KUIS, TOMBOL PELAJARI (JEDA WAKTU) & GULUNGAN MATEMATIKA
        ===================================================================== */
     let currentBuildingKey = null;
     let quizSession = {
       questions: [],
       currentIndex: 0,
-      timer: 45,
-      timerInterval: null
+      timer: 60,
+      timerInterval: null,
+      isTimerPaused: false,
+      isAnswered: false
     };
+
+    let scrollSession = {
+      timer: 60,
+      timerInterval: null,
+      isTimerPaused: false,
+      isAnswered: false
+    };
+
+    function updateQuizTimerBadge() {
+      const timerEl = document.getElementById('quiz-timer');
+      if (!timerEl) return;
+      if (quizSession.isTimerPaused) {
+        timerEl.classList.remove('warning');
+        timerEl.classList.add('paused');
+        timerEl.innerText = `⏸️ Dijeda (${quizSession.timer}s)`;
+      } else {
+        timerEl.classList.remove('paused');
+        if (quizSession.timer <= 10) timerEl.classList.add('warning');
+        else timerEl.classList.remove('warning');
+        timerEl.innerText = `⏱️ ${quizSession.timer}s`;
+      }
+    }
+
+    function updateScrollTimerBadge() {
+      const timerEl = document.getElementById('scroll-timer');
+      if (!timerEl) return;
+      if (scrollSession.isTimerPaused) {
+        timerEl.classList.remove('warning');
+        timerEl.classList.add('paused');
+        timerEl.innerText = `⏸️ Dijeda (${scrollSession.timer}s)`;
+      } else {
+        timerEl.classList.remove('paused');
+        if (scrollSession.timer <= 10) timerEl.classList.add('warning');
+        else timerEl.classList.remove('warning');
+        timerEl.innerText = `⏱️ ${scrollSession.timer}s`;
+      }
+    }
 
     function toggleQuizStudyCard() {
       const card = document.getElementById('quiz-study-card');
+      const btn = document.getElementById('btn-quiz-study-toggle');
+      const hintLabel = document.getElementById('quiz-study-hint-label');
       const isShowing = card.style.display === 'block';
-      card.style.display = isShowing ? 'none' : 'block';
+
       if (!isShowing) {
+        card.style.display = 'block';
+        quizSession.isTimerPaused = true;
+        if (btn) btn.innerHTML = `<span>▶️ Tutup Cara Mengerjakan &amp; Lanjutkan Waktu</span>`;
+        if (hintLabel) hintLabel.innerText = "⏸️ Waktu sedang dijeda agar kamu bisa belajar";
         audio.playCoin();
+      } else {
+        card.style.display = 'none';
+        quizSession.isTimerPaused = false;
+        if (btn) btn.innerHTML = `<span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>`;
+        if (hintLabel) hintLabel.innerText = "▶️ Waktu berlanjut kembali";
       }
+      updateQuizTimerBadge();
     }
 
     function toggleScrollStudyCard() {
       const card = document.getElementById('scroll-study-card');
+      const btn = document.getElementById('btn-scroll-study-toggle');
+      const hintLabel = document.getElementById('scroll-study-hint-label');
       const isShowing = card.style.display === 'block';
-      card.style.display = isShowing ? 'none' : 'block';
+
       if (!isShowing) {
+        card.style.display = 'block';
+        scrollSession.isTimerPaused = true;
+        if (btn) btn.innerHTML = `<span>▶️ Tutup Cara Mengerjakan &amp; Lanjutkan Waktu</span>`;
+        if (hintLabel) hintLabel.innerText = "⏸️ Waktu sedang dijeda agar kamu bisa belajar";
         audio.playCoin();
+      } else {
+        card.style.display = 'none';
+        scrollSession.isTimerPaused = false;
+        if (btn) btn.innerHTML = `<span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>`;
+        if (hintLabel) hintLabel.innerText = "▶️ Waktu berlanjut kembali";
       }
+      updateScrollTimerBadge();
     }
 
     function openScrollChallengeModal(challengeIdx) {
       const ch = worldScrollChallenges[challengeIdx % worldScrollChallenges.length];
       document.getElementById('scroll-player-name').innerText = `${gameState.myName} (LVL ${gameState.myLevel})`;
+      document.getElementById('scroll-apersepsi-text').innerText = ch.apersepsi || "Perhatikan cerita dan ilustrasi matematika berikut sebelum menghitung jawabannya.";
+      document.getElementById('scroll-apersepsi-svg').innerHTML = ch.svg || createMathIllustrationSVG("campuran", "Tantangan Angka", "📜");
       document.getElementById('scroll-question').innerText = ch.q;
       document.getElementById('scroll-study-text').innerText = ch.studyExample || "Perhatikan tanda operasi hitung dan pecah angka menjadi puluhan serta satuan untuk mempermudah perhitungan.";
       document.getElementById('scroll-study-card').style.display = 'none';
+      document.getElementById('btn-scroll-study-toggle').innerHTML = `<span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>`;
+      document.getElementById('scroll-study-hint-label').innerText = "⏸️ Waktu berhenti saat belajar";
       document.getElementById('scroll-explanation').style.display = 'none';
       document.getElementById('scroll-done-btn').style.display = 'none';
 
       const optBox = document.getElementById('scroll-options');
       optBox.innerHTML = '';
 
+      clearInterval(scrollSession.timerInterval);
+      scrollSession.timer = 60;
+      scrollSession.isTimerPaused = false;
+      scrollSession.isAnswered = false;
+      updateScrollTimerBadge();
+
+      scrollSession.timerInterval = setInterval(() => {
+        if (scrollSession.isTimerPaused || scrollSession.isAnswered) return;
+        scrollSession.timer--;
+        updateScrollTimerBadge();
+        if (scrollSession.timer <= 0) {
+          clearInterval(scrollSession.timerInterval);
+          scrollSession.isAnswered = true;
+          audio.playWrong();
+          showToast("⏰ Waktu 1 menit habis! Tidak mendapat poin dan tantangan gulungan dilewati.", "⚠️");
+          closeModal('modal-scroll');
+        }
+      }, 1000);
+
       ch.options.forEach((opt, idx) => {
         const btn = document.createElement('button');
         btn.className = 'answer-btn';
         btn.innerHTML = `<span style="font-weight:900; color:#818cf8;">${String.fromCharCode(65 + idx)}.</span> ${opt}`;
         btn.onclick = () => {
+          if (scrollSession.isAnswered) return;
+          scrollSession.isAnswered = true;
+          clearInterval(scrollSession.timerInterval);
+
           const allBtns = optBox.querySelectorAll('.answer-btn');
           allBtns.forEach(b => b.disabled = true);
 
@@ -3486,6 +3789,7 @@
       quizSession.currentIndex = 0;
 
       document.getElementById('quiz-summary').style.display = 'none';
+      document.getElementById('quiz-apersepsi-box').style.display = 'flex';
       document.getElementById('quiz-question').style.display = 'block';
       document.getElementById('quiz-study-bar').style.display = 'flex';
       document.getElementById('quiz-options').style.display = 'flex';
@@ -3499,9 +3803,13 @@
       const qData = quizSession.questions[quizSession.currentIndex];
       document.getElementById('quiz-current-player-name').innerText = `${gameState.myName} (LVL ${gameState.myLevel})`;
       document.getElementById('quiz-question-counter').innerText = `Soal ${quizSession.currentIndex + 1} / ${quizSession.questions.length}`;
+      document.getElementById('quiz-apersepsi-text').innerText = qData.apersepsi || "Amati ilustrasi dan cerita pengantar di samping untuk memahami maksud soal matematika di bawah ini.";
+      document.getElementById('quiz-apersepsi-svg').innerHTML = qData.svg || createMathIllustrationSVG(currentBuildingKey || "campuran", `Soal #${quizSession.currentIndex + 1}`, "🧮");
       document.getElementById('quiz-question').innerText = `${quizSession.currentIndex + 1}. ${qData.q}`;
       document.getElementById('quiz-study-text').innerText = qData.studyExample || "Pecah bilangan menjadi puluhan dan satuan agar lebih mudah dihitung langkah demi langkah.";
       document.getElementById('quiz-study-card').style.display = 'none';
+      document.getElementById('btn-quiz-study-toggle').innerHTML = `<span>💡 Pelajari Cara Mengerjakan (Waktu Dijeda Saat Dibuka)</span>`;
+      document.getElementById('quiz-study-hint-label').innerText = "⏸️ Waktu berhenti saat belajar";
       document.getElementById('quiz-explanation').style.display = 'none';
       document.getElementById('quiz-next-btn').style.display = 'none';
 
@@ -3517,23 +3825,37 @@
       });
 
       clearInterval(quizSession.timerInterval);
-      quizSession.timer = 45;
-      const timerEl = document.getElementById('quiz-timer');
-      timerEl.classList.remove('warning');
-      timerEl.innerText = `⏱️ ${quizSession.timer}s`;
+      quizSession.timer = 60;
+      quizSession.isTimerPaused = false;
+      quizSession.isAnswered = false;
+      updateQuizTimerBadge();
 
       quizSession.timerInterval = setInterval(() => {
+        if (quizSession.isTimerPaused || quizSession.isAnswered) return;
         quizSession.timer--;
-        timerEl.innerText = `⏱️ ${quizSession.timer}s`;
-        if (quizSession.timer <= 8) timerEl.classList.add('warning');
+        updateQuizTimerBadge();
         if (quizSession.timer <= 0) {
           clearInterval(quizSession.timerInterval);
-          selectAnswer(-1);
+          handleQuestionTimeoutSkip();
         }
       }, 1000);
     }
 
+    function handleQuestionTimeoutSkip() {
+      quizSession.isAnswered = true;
+      audio.playWrong();
+      showToast("⏰ Waktu 1 menit habis! Tidak mendapat poin (0 Poin) & soal dilewati.", "⏭️");
+      if (quizSession.currentIndex >= quizSession.questions.length - 1) {
+        finishQuiz();
+      } else {
+        quizSession.currentIndex++;
+        loadQuestion();
+      }
+    }
+
     function selectAnswer(chosenIdx) {
+      if (quizSession.isAnswered) return;
+      quizSession.isAnswered = true;
       clearInterval(quizSession.timerInterval);
       const qData = quizSession.questions[quizSession.currentIndex];
       const buttons = document.querySelectorAll('#quiz-options .answer-btn');
@@ -3769,6 +4091,14 @@
       const w = document.getElementById('chat-widget');
       const isMin = w.classList.toggle('minimized');
       document.getElementById('chat-toggle-icon').innerText = isMin ? '▲' : '▼';
+    }
+
+    function toggleScoreboardWidget() {
+      const w = document.getElementById('party-scoreboard-widget');
+      if (!w) return;
+      const isMin = w.classList.toggle('minimized');
+      const icon = document.getElementById('scoreboard-toggle-icon');
+      if (icon) icon.innerText = isMin ? '▲' : '▼';
     }
 
     function appendChatLog(senderName, senderColor, messageText, isVoice = false) {
@@ -4009,6 +4339,7 @@
 
     function finishQuiz() {
       clearInterval(quizSession.timerInterval);
+      document.getElementById('quiz-apersepsi-box').style.display = 'none';
       document.getElementById('quiz-question').style.display = 'none';
       document.getElementById('quiz-study-bar').style.display = 'none';
       document.getElementById('quiz-study-card').style.display = 'none';
@@ -4068,6 +4399,7 @@
     function saveCustomQuestion() {
       const mapel = document.getElementById('teacher-mapel').value;
       const question = document.getElementById('teacher-q').value.trim();
+      const apersepsiText = document.getElementById('teacher-apersepsi').value.trim();
       const studyEx = document.getElementById('teacher-study').value.trim();
       const opt0 = document.getElementById('teacher-opt0').value.trim();
       const opt1 = document.getElementById('teacher-opt1').value.trim();
@@ -4082,6 +4414,8 @@
       }
 
       gameState.curriculum[mapel].quizzes.push({
+        apersepsi: apersepsiText || "Perhatikan konteks cerita dan ilustrasi berikut sebelum menyelesaikan perhitungan matematika.",
+        svg: createMathIllustrationSVG(mapel, "Soal Guru", "📐"),
         q: question,
         studyExample: studyEx || "🎯 Contoh Serupa: Pecah angka menjadi puluhan dan satuan agar lebih mudah dihitung langkah demi langkah!",
         options: [opt0, opt1, opt2, opt3],
@@ -4090,7 +4424,7 @@
       });
       saveState();
       audio.playCorrect();
-      showToast("Soal Matematika beserta Contoh Pelajari berhasil ditambahkan!", "📚");
+      showToast("Soal Matematika beserta Apersepsi & Contoh Pelajari berhasil ditambahkan!", "📚");
       closeModal('modal-teacher');
     }
 
@@ -4101,6 +4435,7 @@
         document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
       }
       if (quizSession.timerInterval) clearInterval(quizSession.timerInterval);
+      if (scrollSession && scrollSession.timerInterval) clearInterval(scrollSession.timerInterval);
     }
 
     /* =====================================================================
