@@ -1,0 +1,4692 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Roblox Cerdas 3D - Multiplayer Petualangan Matematika</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Three.js CDN (r128) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- jsPDF CDN untuk Download Sertifikat PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- PeerJS & MQTT.js untuk Sinkronisasi Multiplayer Real-Time Lintas Perangkat (HP/IFP/Laptop) -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-dark: #3730A3;
+      --secondary: #06B6D4;
+      --accent: #F59E0B;
+      --success: #10B981;
+      --danger: #EF4444;
+      --bg-dark: #0f172a;
+      --hud-glass: rgba(15, 23, 42, 0.86);
+      --hud-border: rgba(255, 255, 255, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f19;
+      color: #fff;
+    }
+
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* ================= START REGISTRATION OVERLAY ================= */
+    #registration-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(30, 27, 75, 0.92), rgba(9, 13, 28, 0.98));
+      backdrop-filter: blur(14px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .reg-card {
+      background: #1e293b;
+      border: 2px solid rgba(129, 140, 248, 0.4);
+      border-radius: 26px;
+      width: 100%;
+      max-width: 620px;
+      padding: 28px 32px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+
+    .reg-badge {
+      display: inline-block;
+      background: linear-gradient(90deg, #F59E0B, #D97706);
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .reg-title {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .reg-desc {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .players-input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .player-input-box {
+      background: #0f172a;
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 12px 14px;
+      transition: border-color 0.2s;
+    }
+
+    .player-input-box:focus-within {
+      border-color: #6366f1;
+    }
+
+    .player-input-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .player-input-field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .role-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 14px;
+    }
+
+    .role-tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .role-tab-btn.active {
+      background: linear-gradient(135deg, #4F46E5, #7C3AED);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    .color-picker-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .color-choice {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s;
+    }
+
+    .color-choice.selected {
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+
+    /* Voice Walkie-Talkie Banner */
+    #voice-feed-banner {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: linear-gradient(90deg, #059669, #10B981);
+      border: 2px solid #A7F3D0;
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-weight: 900;
+      font-size: 13px;
+      z-index: 950;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+      transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      pointer-events: none;
+    }
+
+    #voice-feed-banner.active {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .touch-btn-voice {
+      background: linear-gradient(135deg, #EC4899, #DB2777);
+      border-color: #FBCFE8;
+    }
+
+    .touch-btn-voice.recording {
+      background: linear-gradient(135deg, #EF4444, #DC2626);
+      border-color: #FEF08A;
+      animation: pulse 0.8s infinite;
+      transform: scale(1.08);
+    }
+
+    #cert-canvas-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
+    }
+
+    #certificate-canvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 3px solid #FBBF24;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    /* ================= LIVE CHAT BOX & RESPONSIVE PID/MOBILE ================= */
+    #chat-widget {
+      position: fixed;
+      bottom: 165px;
+      right: 16px;
+      width: 310px;
+      max-height: 290px;
+      display: flex;
+      flex-direction: column;
+      z-index: 45;
+      pointer-events: auto;
+      transition: all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      overflow: hidden;
+    }
+
+    #chat-widget.minimized {
+      max-height: 44px;
+      width: 195px;
+    }
+
+    .chat-header {
+      background: linear-gradient(90deg, #4F46E5, #7C3AED);
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 900;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 10px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 175px;
+      font-size: 12px;
+      background: rgba(15, 23, 42, 0.78);
+    }
+
+    .chat-msg-item {
+      background: rgba(30, 41, 59, 0.92);
+      padding: 6px 10px;
+      border-radius: 10px;
+      border-left: 3px solid #38BDF8;
+      line-height: 1.35;
+      word-wrap: break-word;
+    }
+
+    .chat-msg-sender {
+      font-weight: 900;
+      font-size: 11px;
+      color: #FBBF24;
+      margin-right: 4px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .chat-input-field {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .chat-input-field:focus {
+      border-color: #38BDF8;
+    }
+
+    .chat-send-btn {
+      background: #10B981;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-weight: 900;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .admin-lock-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1.5px dashed #F59E0B;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      text-align: left;
+      display: none;
+    }
+
+    /* ================= HUD ================= */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    .glass-card {
+      background: var(--hud-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--hud-border);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+    }
+
+    /* 4-Player Scoreboard HUD */
+    .party-scoreboard {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 16px;
+      min-width: 280px;
+    }
+
+    .turn-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, #4F46E5, #7C3AED);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .party-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .party-member-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .party-member-card.active-turn {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: #FBBF24;
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+    }
+
+    .member-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .member-avatar-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .member-name {
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 85px;
+    }
+
+    .member-score {
+      font-size: 13px;
+      font-weight: 900;
+      color: #FBBF24;
+    }
+
+    .top-right-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .hud-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .scroll-counter-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      font-weight: 800;
+      color: #38BDF8;
+      font-size: 14px;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--hud-border);
+      background: var(--hud-glass);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    #radar-container {
+      width: 106px;
+      height: 106px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      background: rgba(15, 23, 42, 0.88);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    #radar-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Interaction Prompt */
+    #interact-prompt {
+      position: absolute;
+      bottom: 110px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      padding: 12px 24px;
+      border-radius: 30px;
+      background: rgba(79, 70, 229, 0.95);
+      border: 2px solid #A5B4FC;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 8px 25px rgba(79, 70, 229, 0.6);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      pointer-events: auto;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    #interact-prompt.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .key-badge {
+      background: #fff;
+      color: var(--primary-dark);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    /* All-Screen Touch Controls (Always Visible for HP, IFP Smartboard & Laptop) */
+    #mobile-controls {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 22px;
+      pointer-events: none;
+    }
+
+    .left-touch-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    #joystick-zone {
+      width: 130px;
+      height: 130px;
+      position: relative;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #joystick-zone:active {
+      cursor: grabbing;
+    }
+
+    #joystick-base {
+      width: 112px;
+      height: 112px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    #joystick-handle {
+      width: 50px;
+      height: 50px;
+      background: radial-gradient(circle, #A5B4FC, #4F46E5);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+
+    /* D-Pad Buttons for easy tapping on IFP / Laptop / Mobile */
+    .dpad-cluster {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(2, 42px);
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .dpad-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+      backdrop-filter: blur(6px);
+      transition: transform 0.1s, background 0.15s;
+    }
+
+    .dpad-btn:active, .dpad-btn.pressed {
+      background: #4F46E5;
+      border-color: #A5B4FC;
+      transform: scale(0.92);
+    }
+
+    .mobile-buttons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-right: 6px;
+      pointer-events: auto;
+    }
+
+    .touch-btn {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 18px;
+      cursor: pointer;
+      touch-action: none;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      transition: transform 0.1s;
+    }
+
+    .touch-btn:active {
+      transform: scale(0.92);
+    }
+
+    .touch-btn-action {
+      background: linear-gradient(135deg, #10B981, #059669);
+      border-color: #6EE7B7;
+    }
+
+    .touch-btn-jump {
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      border-color: #FCD34D;
+    }
+
+    .touch-btn-cam {
+      width: 52px;
+      height: 52px;
+      font-size: 16px;
+      background: rgba(30, 41, 59, 0.82);
+    }
+
+    .touch-btn-sub {
+      font-size: 9px;
+      font-weight: 800;
+      margin-top: -2px;
+    }
+
+    .tap-hint-pill {
+      position: absolute;
+      bottom: 42px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(255,255,255,0.22);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #E2E8F0;
+      pointer-events: none;
+      white-space: nowrap;
+      backdrop-filter: blur(6px);
+    }
+
+    .hud-footnote {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.65);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+
+    .hud-footnote span {
+      color: #FBBF24;
+      font-weight: 800;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 10, 25, 0.84);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-window {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 22px;
+      width: 100%;
+      max-width: 660px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.95);
+      transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .modal-overlay.active .modal-window {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-icon {
+      font-size: 28px;
+    }
+
+    .modal-title {
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .modal-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .btn-close {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #cbd5e1;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      padding: 22px 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 800;
+      font-size: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Active Player Turn Banner in Quiz */
+    .quiz-turn-banner {
+      background: linear-gradient(90deg, #1E1B4B, #312E81);
+      border: 2px solid #818CF8;
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .quiz-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      font-weight: 800;
+    }
+
+    .timer-badge {
+      background: #334155;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+
+    .timer-badge.warning {
+      background: #DC2626;
+      animation: pulse 1s infinite;
+    }
+
+    .question-box {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 14px;
+      border-radius: 12px;
+      border-left: 4px solid #F59E0B;
+    }
+
+    /* Tombol & Kartu Pelajari Cara Mengerjakan */
+    .study-helper-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+
+    .btn-study-helper {
+      background: linear-gradient(135deg, #0284C7, #0369A1);
+      border: 2px solid #7DD3FC;
+      color: #fff;
+      padding: 9px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-study-helper:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #0369A1, #1D4ED8);
+    }
+
+    .study-example-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 58, 138, 0.85));
+      border: 2px dashed #38BDF8;
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .study-example-title {
+      font-size: 13px;
+      font-weight: 900;
+      color: #FDE047;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .study-example-body {
+      font-size: 13.5px;
+      color: #E2E8F0;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .answers-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .answer-btn {
+      background: #334155;
+      border: 2px solid transparent;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .answer-btn:hover:not(:disabled) {
+      border-color: #6366f1;
+      background: #3e4c63;
+      transform: translateX(4px);
+    }
+
+    .answer-btn.correct {
+      background: #065F46 !important;
+      border-color: #10B981 !important;
+      color: #A7F3D0;
+    }
+
+    .answer-btn.wrong {
+      background: #881337 !important;
+      border-color: #F43F5E !important;
+      color: #FECDD3;
+    }
+
+    .explanation-card {
+      background: rgba(30, 41, 59, 0.95);
+      border-left: 4px solid var(--secondary);
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin-top: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #4F46E5, #6366F1);
+      color: #fff;
+      border: none;
+      padding: 13px 22px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+      transition: transform 0.15s;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Podium & Leaderboard Styles */
+    .podium-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 14px;
+      margin: 24px 0 28px 0;
+      height: 180px;
+    }
+
+    .podium-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 110px;
+    }
+
+    .podium-name {
+      font-weight: 900;
+      font-size: 13px;
+      margin-bottom: 4px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 105px;
+    }
+
+    .podium-score {
+      font-size: 12px;
+      color: #FBBF24;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .podium-bar {
+      width: 100%;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 900;
+      box-shadow: 0 -6px 20px rgba(0,0,0,0.3);
+    }
+
+    .rank-list-item {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Wardrobe */
+    .wardrobe-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .wardrobe-item {
+      background: #0f172a;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .wardrobe-item.active {
+      border-color: #10B981;
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    .wardrobe-preview {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .wardrobe-label {
+      font-weight: 800;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #cbd5e1;
+    }
+
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+
+    #toast-banner {
+      position: absolute;
+      top: 85px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      background: rgba(16, 185, 129, 0.95);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #toast-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    /* Ultra-Large Screen Support for PID / IFP Smartboard */
+    @media (min-width: 1440px) {
+      .touch-btn {
+        width: 78px;
+        height: 78px;
+        font-size: 22px;
+      }
+      .dpad-cluster {
+        grid-template-columns: repeat(3, 52px);
+        grid-template-rows: repeat(2, 52px);
+      }
+      .dpad-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 20px;
+      }
+      #chat-widget {
+        width: 360px;
+        max-height: 340px;
+        bottom: 185px;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .players-input-grid {
+        grid-template-columns: 1fr;
+      }
+      .party-scoreboard {
+        min-width: 185px;
+        max-width: 54vw;
+        padding: 7px 9px;
+      }
+      .hud-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+      }
+      .scroll-counter-badge {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      #radar-container {
+        width: 78px;
+        height: 78px;
+      }
+      .dpad-cluster {
+        display: none;
+      }
+      #joystick-zone {
+        width: 108px;
+        height: 108px;
+      }
+      #joystick-base {
+        width: 94px;
+        height: 94px;
+      }
+      .touch-btn {
+        width: 54px;
+        height: 54px;
+        font-size: 15px;
+      }
+      .touch-btn-cam {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+      }
+      #chat-widget {
+        width: 255px;
+        bottom: 145px;
+        right: 10px;
+      }
+      #interact-prompt {
+        bottom: 145px;
+        font-size: 13px;
+        padding: 9px 18px;
+      }
+      .tap-hint-pill {
+        bottom: 98px;
+        font-size: 9.5px;
+        max-width: 94vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .hud-footnote {
+        font-size: 8.5px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BANNER SUARA WALKIE-TALKIE LIVE -->
+  <div id="voice-feed-banner">
+    <span>🎙️</span>
+    <span id="voice-feed-text">Seseorang sedang berbicara...</span>
+  </div>
+
+  <!-- LAYAR GABUNG KODE ROOM & PENDAFTARAN MULTIPLAYER -->
+  <div id="registration-overlay">
+    <div class="reg-card">
+      <div class="reg-badge">🌐 Personal &amp; Join Team &bull; Matematika Dasar &bull; E-Certificate</div>
+      <h1 class="reg-title">Petualangan Matematika 3D</h1>
+      <p class="reg-desc">
+        Kuasai <strong>Penjumlahan, Pengurangan, Perkalian, &amp; Pembagian</strong>! Pilih mode <strong>Bermain Personal</strong> atau <strong>Join Team</strong> dengan <strong>Kode Tim/Kelas</strong> yang sama. Dilengkapi tombol <strong>💡 Pelajari</strong> berisi contoh cara menghitung agar kamu bisa menjawab dengan tepat dan meraih <strong>Sertifikat Juara! 🏆</strong>
+      </p>
+
+      <!-- Menu Pilihan Mode Permainan: Personal vs Join Team vs Guru -->
+      <div class="role-tabs">
+        <button type="button" class="role-tab-btn" id="tab-mode-personal" onclick="switchLobbyMode('personal')">👤 Bermain Personal</button>
+        <button type="button" class="role-tab-btn active" id="tab-mode-team" onclick="switchLobbyMode('team')">🤝 Join Team (Kode Sama)</button>
+        <button type="button" class="role-tab-btn" id="tab-mode-teacher" onclick="switchLobbyMode('teacher')">👨‍🏫 Guru (Atur Kode)</button>
+      </div>
+
+      <!-- Panel Verifikasi Token Admin Guru -->
+      <div class="admin-lock-box" id="teacher-token-box">
+        <div style="font-size:12px; font-weight:800; color:#FBBF24; margin-bottom:6px;">
+          🔒 Masukkan Token Admin Guru untuk Membuka Pengaturan Kode Tim/Kelas:
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="password" class="form-input" id="input-admin-token" placeholder="Masukkan Token Admin (Default: GURU123)" style="flex:1;">
+          <button type="button" onclick="verifyTeacherTokenLobby()" style="background:#10B981; color:#fff; border:none; padding:0 16px; border-radius:8px; font-weight:900; font-size:12px; cursor:pointer; white-space:nowrap;">🔓 Buka Akses</button>
+        </div>
+        <div id="token-status-msg" style="font-size:11px; color:#94a3b8; margin-top:5px;">
+          *Token Admin standar adalah <strong>GURU123</strong>. Hanya guru yang terverifikasi yang dapat mengubah kode kelas aktif.
+        </div>
+      </div>
+
+      <div class="players-input-grid" id="lobby-inputs-grid">
+        <div class="player-input-box" id="player-name-box">
+          <div class="player-input-label">
+            <span>👤 Nama Lengkapmu (Untuk Sertifikat)</span>
+          </div>
+          <input type="text" class="player-input-field" id="input-player-name" value="" placeholder="Ketik namamu di sini..." maxlength="24">
+        </div>
+
+        <div class="player-input-box" id="room-code-box">
+          <div class="player-input-label">
+            <span id="room-code-label">🔑 Masukkan Kode Join Team / Kelas</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="text" class="player-input-field" id="input-room-code" value="MATEMATIKA1" maxlength="12" placeholder="Ketik Kode Tim..." style="text-transform:uppercase; color:#FBBF24; letter-spacing:1.5px; cursor:text;" title="Masukkan Kode yang sama dengan temanmu untuk bertemu di game yang sama">
+            <button type="button" id="btn-gen-code" onclick="generateNewRoomCode()" style="display:none; background:#4F46E5; color:#fff; border:none; padding:6px 10px; border-radius:8px; font-weight:800; font-size:11px; cursor:pointer; white-space:nowrap;">🎲 Acak Kode</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-input-box" style="margin-bottom: 22px; text-align:left;">
+        <div class="player-input-label">🎨 Pilih Warna Kostum Petualangmu:</div>
+        <div class="color-picker-row" id="lobby-color-picker">
+          <div class="color-choice selected" data-color="#EF4444" style="background:#EF4444;" onclick="selectLobbyColor('#EF4444', this)"></div>
+          <div class="color-choice" data-color="#3B82F6" style="background:#3B82F6;" onclick="selectLobbyColor('#3B82F6', this)"></div>
+          <div class="color-choice" data-color="#10B981" style="background:#10B981;" onclick="selectLobbyColor('#10B981', this)"></div>
+          <div class="color-choice" data-color="#F59E0B" style="background:#F59E0B;" onclick="selectLobbyColor('#F59E0B', this)"></div>
+          <div class="color-choice" data-color="#8B5CF6" style="background:#8B5CF6;" onclick="selectLobbyColor('#8B5CF6', this)"></div>
+          <div class="color-choice" data-color="#EC4899" style="background:#EC4899;" onclick="selectLobbyColor('#EC4899', this)"></div>
+          <div class="color-choice" data-color="#06B6D4" style="background:#06B6D4;" onclick="selectLobbyColor('#06B6D4', this)"></div>
+        </div>
+      </div>
+
+      <button type="button" class="primary-btn" id="btn-join-game" onclick="joinMultiplayerRoom()">🤝 Gabung Join Team &amp; Masuk Dunia 3D!</button>
+    </div>
+  </div>
+
+  <!-- WebGL Canvas 3D -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Notifikasi Toast -->
+  <div id="toast-banner">
+    <span id="toast-icon">✨</span>
+    <span id="toast-msg">Pemberitahuan</span>
+  </div>
+
+  <!-- HUD Layer -->
+  <div id="hud">
+    <div class="hud-top">
+      <!-- Papan Skor Online Real-Time & Info Ruangan -->
+      <div class="glass-card party-scoreboard interactive">
+        <div class="turn-banner">
+          <span>🌐 Kode Kelas: <strong id="hud-room-code" style="color:#FDE68A; letter-spacing:1px;">MATEMATIKA1</strong></span>
+          <span id="hud-online-count" style="font-size:11px; background:rgba(16,185,129,0.3); padding:2px 8px; border-radius:8px; border:1px solid #34D399;">🟢 1 Online</span>
+        </div>
+        <div style="font-size:11px; color:#A5B4FC; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+          <span id="hud-my-stats">⭐ LVL 1 &bull; 0 Poin</span>
+          <span id="hud-net-status" style="font-size:10px; color:#34D399;">📡 Live Sync Aktif</span>
+        </div>
+        <div style="font-size:10px; color:#94a3b8; margin-top:-2px;">
+          💡 <em>Klik nama teman di bawah untuk menghampiri posisinya:</em>
+        </div>
+        <div class="party-grid" id="hud-party-grid">
+          <!-- Daftar pemain online dirender real-time -->
+        </div>
+      </div>
+
+      <div class="top-right-group interactive">
+        <div class="hud-actions">
+          <div class="glass-card scroll-counter-badge" title="Gulungan Soal Matematika Ditemukan">
+            <span>📜 Gulungan:</span>
+            <span id="hud-scrolls">0 / 12</span>
+          </div>
+          <button type="button" class="icon-btn" id="btn-certificate-top" title="Klaim Sertifikat Juara (PNG / PDF)" onclick="openCertificateModal()" style="background: linear-gradient(135deg, #10B981, #059669); border-color:#A7F3D0;">🎓</button>
+          <button type="button" class="icon-btn" id="btn-leaderboard" title="Podium Juara & Klasemen Skor Live" style="background: linear-gradient(135deg, #F59E0B, #D97706); border-color:#FDE68A;">🏆</button>
+          <button type="button" class="icon-btn" id="btn-chat-toggle" title="Buka / Tutup Kolom Chat Kelas" onclick="toggleChatWidget()" style="background: linear-gradient(135deg, #0284C7, #2563EB); border-color:#7DD3FC;">💬</button>
+          <button type="button" class="icon-btn" id="btn-wardrobe" title="Lemari Gaya Seragam">👕</button>
+          <button type="button" class="icon-btn" id="btn-teacher" title="Mode Guru (Token Admin & Bank Soal)">👨‍🏫</button>
+          <button type="button" class="icon-btn" id="btn-register-again" title="Ubah Nama / Pengaturan Kelas" onclick="openRegistrationModal()">🔑</button>
+          <button type="button" class="icon-btn" id="btn-pause" title="Jeda Permainan">⏸️</button>
+        </div>
+        <!-- 2D Minimap Radar -->
+        <div id="radar-container">
+          <canvas id="radar-canvas" width="106" height="106"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- WIDGET LIVE CHAT KELAS REAL-TIME -->
+    <div id="chat-widget" class="glass-card interactive">
+      <div class="chat-header" onclick="toggleChatWidget()">
+        <span>💬 Live Chat Kelas (<span id="chat-room-badge">MATEMATIKA1</span>)</span>
+        <span id="chat-toggle-icon" style="font-size:14px;">▼</span>
+      </div>
+      <div class="chat-messages" id="chat-messages-box">
+        <div class="chat-msg-item">
+          <span class="chat-msg-sender">Sistem:</span>
+          <span>Selamat datang di Dunia Matematika! Gunakan kolom chat ini atau tombol 🎙️ BICARA untuk berdiskusi cara berhitung dengan teman sekelas.</span>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input-text" class="chat-input-field" placeholder="Ketik pesan / diskusi berhitung..." maxlength="100" onkeydown="if(event.key==='Enter'){ event.stopPropagation(); sendChatMessage(); }">
+        <button type="button" class="chat-send-btn" onclick="sendChatMessage()">Kirim</button>
+      </div>
+    </div>
+
+    <!-- Tombol Interaksi Muncul Saat Dekat Objek -->
+    <div id="interact-prompt" onclick="triggerCurrentInteraction()">
+      <span class="key-badge">SENTUH / E</span>
+      <span id="interact-text">Buka Tantangan Matematika</span>
+    </div>
+
+    <!-- Petunjuk Sentuh Tanah / Layar -->
+    <div class="tap-hint-pill">
+      👆 Sentuh jalan untuk bergerak &bull; 💡 Klik tombol <strong>Pelajari</strong> saat kuis untuk melihat contoh cara menghitung!
+    </div>
+
+    <!-- Kontrol Layar Sentuh Universal (HP, Layar IFP & Laptop) -->
+    <div id="mobile-controls">
+      <div class="left-touch-group">
+        <!-- Virtual Analog Joystick (Bisa Disentuh Jari & Mouse) -->
+        <div id="joystick-zone" class="interactive" title="Geser untuk berjalan">
+          <div id="joystick-base">
+            <div id="joystick-handle"></div>
+          </div>
+        </div>
+
+        <!-- Tombol Arah D-Pad (Nyaman untuk papan IFP & Klik Mouse) -->
+        <div class="dpad-cluster interactive">
+          <div></div>
+          <button class="dpad-btn" data-dir="forward" title="Maju (W)">▲</button>
+          <div></div>
+          <button class="dpad-btn" data-dir="left" title="Kiri (A)">◀</button>
+          <button class="dpad-btn" data-dir="backward" title="Mundur (S)">▼</button>
+          <button class="dpad-btn" data-dir="right" title="Kanan (D)">▶</button>
+        </div>
+      </div>
+
+      <div class="mobile-buttons interactive">
+        <div class="touch-btn touch-btn-voice" id="touch-voice-ptt" title="Tekan untuk Berbicara ke Teman Sekelas (Walkie-Talkie)">
+          <span id="voice-btn-icon">🎙️</span>
+          <span class="touch-btn-sub" id="voice-btn-label">BICARA</span>
+        </div>
+        <div class="touch-btn touch-btn-cam" id="touch-cam-left" title="Putar Kamera Kiri">
+          <span>↺</span>
+          <span class="touch-btn-sub">KAMERA</span>
+        </div>
+        <div class="touch-btn touch-btn-cam" id="touch-cam-right" title="Putar Kamera Kanan">
+          <span>↻</span>
+          <span class="touch-btn-sub">KAMERA</span>
+        </div>
+        <div class="touch-btn touch-btn-jump" id="touch-jump" title="Lompat">
+          <span>▲</span>
+          <span class="touch-btn-sub">LOMPAT</span>
+        </div>
+        <div class="touch-btn touch-btn-action" id="touch-interact" title="Interaksi / Buka Pos">
+          <span>⚡</span>
+          <span class="touch-btn-sub">BUKA POS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footnote -->
+    <div class="hud-footnote">
+      Roblox Cerdas 3D: Petualangan Matematika &bull; Dikembangkan oleh <span>Mingga Ria Hadi</span> &bull; Live Voice &amp; Certificate
+    </div>
+  </div>
+
+  <!-- MODAL GEDUNG POS MATEMATIKA & KUIS -->
+  <div class="modal-overlay" id="modal-building">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon" id="building-modal-icon">🏛️</div>
+          <div>
+            <div class="modal-title" id="building-modal-title">Pos Matematika</div>
+            <div class="modal-subtitle">Tantangan Berhitung Penjumlahan, Pengurangan, Perkalian &amp; Pembagian</div>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-building')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-btn-materi" onclick="switchBuildingTab('materi')">📖 Panduan Materi</button>
+          <button class="tab-btn" id="tab-btn-kuis" onclick="switchBuildingTab('kuis')">⚔️ Tantangan Berhitung</button>
+        </div>
+
+        <!-- Konten Tab 1: Materi -->
+        <div id="tab-content-materi">
+          <div style="background: rgba(15,23,42,0.7); padding: 18px; border-radius: 12px; margin-bottom: 18px; line-height: 1.65; font-size: 14px;" id="materi-text">
+            Materi Matematika akan dimuat di sini...
+          </div>
+          <button class="primary-btn" onclick="startBuildingQuiz()">Mulai Tantangan Kuis Sekarang!</button>
+        </div>
+
+        <!-- Konten Tab 2: Kuis -->
+        <div id="tab-content-kuis" style="display: none;">
+          <div class="quiz-turn-banner" id="quiz-turn-indicator">
+            <span>🎮 Petualang Penjawab: <strong id="quiz-current-player-name" style="color:#FBBF24;">Petualang</strong></span>
+            <span id="quiz-question-counter" style="font-size:12px; color:#A5B4FC;">Soal 1 / 4</span>
+          </div>
+
+          <div class="quiz-stats">
+            <div style="color:#34D399; font-size:13px;">Poin Benar: +25 Poin</div>
+            <div class="timer-badge" id="quiz-timer">⏱️ 45s</div>
+          </div>
+
+          <div class="question-box" id="quiz-question">Pertanyaan kuis akan dimuat di sini...</div>
+
+          <!-- Tombol Pelajari & Kotak Contoh Serupa -->
+          <div class="study-helper-bar" id="quiz-study-bar">
+            <button type="button" class="btn-study-helper" onclick="toggleQuizStudyCard()">
+              <span>💡 Pelajari Cara Mengerjakan (Contoh Soal Serupa)</span>
+            </button>
+            <span style="font-size:11px; color:#94a3b8; font-weight:700;">Buka jika butuh petunjuk langkah hitung!</span>
+          </div>
+
+          <div class="study-example-card" id="quiz-study-card">
+            <div class="study-example-title">📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</div>
+            <div class="study-example-body" id="quiz-study-text"></div>
+          </div>
+
+          <div class="answers-grid" id="quiz-options"></div>
+          
+          <div class="explanation-card" id="quiz-explanation">
+            <strong>💡 Pembahasan Lengkap:</strong>
+            <p id="quiz-explanation-text" style="margin-top: 4px;"></p>
+          </div>
+          
+          <button class="primary-btn" id="quiz-next-btn" style="margin-top: 14px; display: none;" onclick="nextQuestion()">Soal Berikutnya ➔</button>
+          
+          <!-- Layar Hasil Kuis Pos -->
+          <div id="quiz-summary" style="display: none; text-align: center; padding: 16px 0;">
+            <h2 style="font-size: 24px; font-weight: 900; margin-bottom: 6px;">Tantangan Pos Selesai! 🎉</h2>
+            <p style="font-size: 14px; color: #94a3b8; margin-bottom: 18px;">Skor dan Level di atas kepalamu telah diperbarui secara langsung. Mari cek posisi juara kelas saat ini!</p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button class="primary-btn" style="flex:1; background: #F59E0B;" onclick="closeModal('modal-building'); openLeaderboardModal();">🏆 Lihat Podium Juara</button>
+              <button class="primary-btn" style="flex:1; background: #10B981;" onclick="closeModal('modal-building'); openCertificateModal();">🎓 Klaim Sertifikat</button>
+              <button class="primary-btn" style="flex:1;" onclick="closeModal('modal-building')">Lanjut Berpetualang</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TANTANGAN GULUNGAN MATEMATIKA DI JALAN (SCROLL CHALLENGE) -->
+  <div class="modal-overlay" id="modal-scroll">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">📜</div>
+          <div>
+            <div class="modal-title">Gulungan Angka Misterius Ditemukan!</div>
+            <div class="modal-subtitle">Jawab dengan benar untuk meraih +30 Poin Petualang</div>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-scroll')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="quiz-turn-banner">
+          <span>🎯 Penemu Gulungan: <strong id="scroll-player-name" style="color:#FDE68A;">Petualang</strong></span>
+          <span style="color:#34D399;">Hadiah: +30 Poin</span>
+        </div>
+        <div class="question-box" id="scroll-question">Pertanyaan gulungan...</div>
+
+        <!-- Tombol Pelajari untuk Gulungan -->
+        <div class="study-helper-bar">
+          <button type="button" class="btn-study-helper" onclick="toggleScrollStudyCard()">
+            <span>💡 Pelajari Cara Mengerjakan (Contoh Serupa)</span>
+          </button>
+        </div>
+        <div class="study-example-card" id="scroll-study-card">
+          <div class="study-example-title">📘 Contoh Cara Mengerjakan (Angka Berbeda, Tujuan Sama):</div>
+          <div class="study-example-body" id="scroll-study-text"></div>
+        </div>
+
+        <div class="answers-grid" id="scroll-options"></div>
+        <div class="explanation-card" id="scroll-explanation">
+          <strong>💡 Pembahasan:</strong>
+          <p id="scroll-explanation-text" style="margin-top:4px;"></p>
+        </div>
+        <button class="primary-btn" id="scroll-done-btn" style="margin-top: 14px; display: none;" onclick="closeModal('modal-scroll')">Lanjutkan Petualangan ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PODIUM JUARA & KLASEMEN SKOR REAL-TIME -->
+  <div class="modal-overlay" id="modal-leaderboard">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">🏆</div>
+          <div>
+            <div class="modal-title">Podium Juara Petualangan Matematika</div>
+            <div class="modal-subtitle">Pemain dengan Nilai Tertinggi Berhak Mengklaim Sertifikat Juara!</div>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-leaderboard')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="winner-announcement" style="text-align:center; background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(16,185,129,0.2)); border: 2px solid #FBBF24; border-radius: 16px; padding: 14px; margin-bottom: 10px;">
+          <div style="font-size: 12px; font-weight: 900; color: #FDE68A; text-transform: uppercase; letter-spacing: 1px;">👑 Pemimpin Skor Tertinggi Saat Ini 👑</div>
+          <div id="champion-name" style="font-size: 24px; font-weight: 900; color: #fff; margin-top: 2px;">Petualang</div>
+        </div>
+
+        <!-- Visual 3D-Style Bar Podium -->
+        <div class="podium-container" id="podium-box"></div>
+
+        <!-- Daftar Lengkap Pemain -->
+        <h4 style="margin-bottom: 10px; font-size: 13px; color: #94a3b8; font-weight: 800;">Klasemen Real-Time Seluruh Pemain di Kelas (<span id="leaderboard-room-label">MATEMATIKA1</span>):</h4>
+        <div id="leaderboard-list"></div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top: 18px;">
+          <button class="primary-btn" style="flex:1; background:linear-gradient(135deg, #F59E0B, #D97706);" onclick="closeModal('modal-leaderboard'); openCertificateModal();">🎓 Klaim Sertifikat Juara (PNG / PDF)</button>
+          <button class="primary-btn" style="flex:1; background:#10B981;" onclick="closeModal('modal-leaderboard')">Lanjut Berpetualang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SERTIFIKAT JUARA (DOWNLOAD PNG & PDF) -->
+  <div class="modal-overlay" id="modal-certificate">
+    <div class="modal-window" style="max-width: 760px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">🎓</div>
+          <div>
+            <div class="modal-title">Klaim E-Sertifikat Juara Matematika</div>
+            <div class="modal-subtitle">Peraih Nilai Tertinggi Berhak Mengklaim Sertifikat Juara Tercepat!</div>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-certificate')">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div id="cert-eligibility-banner" style="padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 800;">
+          Memeriksa peringkat skormu...
+        </div>
+
+        <div id="cert-canvas-wrapper">
+          <canvas id="certificate-canvas" width="1000" height="700"></canvas>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+          <button class="primary-btn" id="btn-download-png" style="flex:1; background:linear-gradient(135deg, #0284C7, #2563EB);" onclick="downloadCertificatePNG()">🖼️ Download Sertifikat (PNG)</button>
+          <button class="primary-btn" id="btn-download-pdf" style="flex:1; background:linear-gradient(135deg, #DC2626, #E11D48);" onclick="downloadCertificatePDF()">📄 Download Sertifikat (PDF)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LEMARI GAYA (WARDROBE) -->
+  <div class="modal-overlay" id="modal-wardrobe">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">👕</div>
+          <div>
+            <div class="modal-title">Lemari Gaya Ketua Regu</div>
+            <div class="modal-subtitle">Kustomisasi Seragam &amp; Aksesoris Petualang</div>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-wardrobe')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <h4 style="margin-bottom: 10px; font-weight: 800; color: #cbd5e1; font-size: 13px;">Pilihan Seragam Sekolah &amp; Budaya:</h4>
+        <div class="wardrobe-grid" id="outfit-options"></div>
+
+        <h4 style="margin: 16px 0 10px 0; font-weight: 800; color: #cbd5e1; font-size: 13px;">Pilihan Aksesoris:</h4>
+        <div class="wardrobe-grid" id="accessory-options"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MODE GURU -->
+  <div class="modal-overlay" id="modal-teacher">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">👨‍🏫</div>
+          <div>
+            <div class="modal-title">Mode Guru - Kode Kelas &amp; Bank Soal Matematika</div>
+            <div class="modal-subtitle">Masukkan Token Admin untuk Mengubah Kode Kelas atau Menambah Soal + Contoh Pelajari</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" onclick="closeModal('modal-teacher')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Kontrol Kode Kelas Khusus Guru di Dalam Permainan -->
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #6366F1; border-radius: 14px; padding: 14px; margin-bottom: 18px;">
+          <div style="font-size: 13px; font-weight: 900; color: #FBBF24; margin-bottom: 8px;">
+            🔑 Pengaturan Kode Kelas oleh Guru (Wajib Token Admin)
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <input type="password" class="form-input" id="modal-teacher-token" placeholder="Token Admin (Default: GURU123)" style="flex: 1; min-width: 160px;">
+            <input type="text" class="form-input" id="modal-new-room-code" placeholder="Kode Kelas Baru (Misal: KELAS5A)" maxlength="10" style="flex: 1; min-width: 140px; text-transform: uppercase; font-weight: 900; color: #38BDF8;">
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="primary-btn" style="flex: 1; padding: 9px; font-size: 13px; background: #059669;" onclick="changeRoomCodeByTeacher()">✅ Terapkan Kode Kelas Baru untuk Semua Siswa</button>
+            <button type="button" class="primary-btn" style="width: auto; padding: 9px 14px; font-size: 13px; background: #4F46E5;" onclick="randomizeTeacherModalCode()">🎲 Acak</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Pilih Pos Tantangan Matematika:</label>
+          <select class="form-select" id="teacher-mapel">
+            <option value="penjumlahan">Pos 1: Penjumlahan (+)</option>
+            <option value="pengurangan">Pos 2: Pengurangan (-)</option>
+            <option value="perkalian">Pos 3: Perkalian (&times;)</option>
+            <option value="pembagian">Pos 4: Pembagian (&divide;)</option>
+            <option value="campuran">Pos 5: Operasi Campuran &amp; Soal Cerita</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pertanyaan Soal Baru:</label>
+          <input type="text" class="form-input" id="teacher-q" placeholder="Contoh: Berapakah hasil dari 15 x 6?">
+        </div>
+        <div class="form-group">
+          <label>💡 Contoh Cara Mengerjakan (Tombol Pelajari - Gunakan Angka Berbeda):</label>
+          <textarea class="form-textarea" rows="2" id="teacher-study" placeholder="Contoh: Misal menghitung 14 x 5: Pisahkan puluhan dan satuan -> (10 x 5) + (4 x 5) = 50 + 20 = 70."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Pilihan Jawaban (A, B, C, D):</label>
+          <input type="text" class="form-input" id="teacher-opt0" placeholder="Pilihan A" style="margin-bottom:6px;">
+          <input type="text" class="form-input" id="teacher-opt1" placeholder="Pilihan B" style="margin-bottom:6px;">
+          <input type="text" class="form-input" id="teacher-opt2" placeholder="Pilihan C" style="margin-bottom:6px;">
+          <input type="text" class="form-input" id="teacher-opt3" placeholder="Pilihan D">
+        </div>
+        <div class="form-group">
+          <label>Kunci Jawaban Benar:</label>
+          <select class="form-select" id="teacher-correct">
+            <option value="0">Pilihan A</option>
+            <option value="1">Pilihan B</option>
+            <option value="2">Pilihan C</option>
+            <option value="3">Pilihan D</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pembahasan Edukatif:</label>
+          <textarea class="form-textarea" rows="2" id="teacher-explain" placeholder="Tuliskan langkah perhitungan jawaban yang benar..."></textarea>
+        </div>
+        <button class="primary-btn" onclick="saveCustomQuestion()">Simpan Soal ke Pos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIKA UTAMA -->
+  <script>
+    /* =====================================================================
+       1. SYNTHESIZER AUDIO PROSEDURAL
+       ===================================================================== */
+    class ProceduralAudio {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playJump() {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.14);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+      playCoin() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.08);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.33);
+      }
+      playCorrect() {
+        this.init();
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const t = this.ctx.currentTime + (idx * 0.06);
+          gain.gain.setValueAtTime(0.18, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+          osc.start(t);
+          osc.stop(t + 0.2);
+        });
+      }
+      playWrong() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.22);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.26);
+        osc.start(now);
+        osc.stop(now + 0.27);
+      }
+      playLevelUp() {
+        this.init();
+        const chord = [440, 554.37, 659.25, 880];
+        chord.forEach(freq => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.55);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.56);
+        });
+      }
+    }
+    const audio = new ProceduralAudio();
+
+    /* =====================================================================
+       2. KURIKULUM MATEMATIKA (PENJUMLAHAN, PENGURANGAN, PERKALIAN, PEMBAGIAN)
+          DILENGKAPI CONTOH CARA MENGERJAKAN (TOMBOL PELAJARI)
+       ===================================================================== */
+    const defaultCurriculum = {
+      penjumlahan: {
+        title: "Pos 1: Penjumlahan (+)",
+        icon: "➕",
+        color: 0xEF4444,
+        materi: "Penjumlahan adalah cara menggabungkan dua atau lebih bilangan menjadi satu jumlah total. Trik Cepat: Kelompokkan Ratusan dengan Ratusan, Puluhan dengan Puluhan, dan Satuan dengan Satuan! Jika hasil satuan mencapai 10 atau lebih, simpan 1 ke puluhan.",
+        quizzes: [
+          {
+            q: "Berapakah hasil penjumlahan dari 47 + 38?",
+            studyExample: "🎯 Contoh Serupa: Mari hitung 56 + 27!\n1. Jumlahkan puluhan: 50 + 20 = 70\n2. Jumlahkan satuan: 6 + 7 = 13\n3. Gabungkan keduanya: 70 + 13 = 83.\nSekarang gunakan cara yang sama untuk 47 + 38!",
+            options: ["75", "85", "86", "95"],
+            answer: 1,
+            explain: "Puluhan: 40 + 30 = 70. Satuan: 7 + 8 = 15. Totalnya: 70 + 15 = 85."
+          },
+          {
+            q: "Di perpustakaan sekolah terdapat 135 buku cerita dan 148 buku pengetahuan. Berapa jumlah seluruh buku tersebut?",
+            studyExample: "🎯 Contoh Serupa: Misal ada 124 buku merah dan 159 buku biru.\n1. Ratusan: 100 + 100 = 200\n2. Puluhan: 20 + 50 = 70\n3. Satuan: 4 + 9 = 13\n4. Total: 200 + 70 + 13 = 283 buku.",
+            options: ["273 buku", "283 buku", "293 buku", "285 buku"],
+            answer: 1,
+            explain: "135 + 148 -> Ratusan (100+100=200) + Puluhan (30+40=70) + Satuan (5+8=13) = 283 buku."
+          },
+          {
+            q: "Berapakah hasil dari 264 + 176?",
+            studyExample: "🎯 Contoh Serupa: Hitung 342 + 188!\n1. Perhatikan satuannya pas menjadi 10: 2 + 8 = 10.\n2. Puluhan: 40 + 80 = 120.\n3. Ratusan: 300 + 100 = 400.\n4. Jumlahkan semua: 400 + 120 + 10 = 530.",
+            options: ["430", "440", "450", "340"],
+            answer: 1,
+            explain: "Satuan: 4 + 6 = 10. Puluhan: 60 + 70 = 130. Ratusan: 200 + 100 = 300. Total: 300 + 130 + 10 = 440."
+          },
+          {
+            q: "Panitia memanen 75 buah mangga di kebun A, 25 buah di kebun B, dan 49 buah di kebun C. Berapa total mangga yang dipanen?",
+            studyExample: "🎯 Contoh Serupa: Hitung 65 + 35 + 42!\n1. Cari pasangan angka yang menghasilkan ratusan bulat dulu: 65 + 35 = 100.\n2. Baru tambahkan angka ketiga: 100 + 42 = 142.",
+            options: ["139 buah", "149 buah", "159 buah", "145 buah"],
+            answer: 1,
+            explain: "Pasangkan dulu 75 + 25 = 100. Lalu tambahkan 49: 100 + 49 = 149 buah mangga."
+          }
+        ]
+      },
+      pengurangan: {
+        title: "Pos 2: Pengurangan (-)",
+        icon: "➖",
+        color: 0x3B82F6,
+        materi: "Pengurangan adalah mencari selisih atau sisa setelah suatu bilangan diambil sebagian. Trik Mudah: Kurangi dari nilai tempat satuan terlebih dahulu. Jika angka satuan di atas lebih kecil, pinjam 1 puluhan (nilainya 10) dari angka di depannya!",
+        quizzes: [
+          {
+            q: "Berapakah hasil pengurangan dari 92 - 37?",
+            studyExample: "🎯 Contoh Serupa: Mari hitung 83 - 26!\n1. Karena satuan 3 tidak cukup dikurangi 6, pinjam 1 puluhan dari 80 (80 sisa 70, satuan menjadi 13).\n2. Kurangi satuan: 13 - 6 = 7.\n3. Kurangi puluhan: 70 - 20 = 50.\n4. Gabungkan: 50 + 7 = 57.",
+            options: ["55", "65", "53", "45"],
+            answer: 0,
+            explain: "Pinjam 1 puluhan dari 90 menjadi 80 dan satuan menjadi 12. Lalu (12 - 7 = 5) dan (80 - 30 = 50). Hasilnya 55."
+          },
+          {
+            q: "Seorang pedagang membawa 150 balon. Di perjalanan, 64 balon terjual kepada anak-anak. Berapa sisa balon pedagang itu?",
+            studyExample: "🎯 Contoh Serupa: Hitung 140 - 52!\n1. Kurangi puluhan bulat dulu: 140 - 50 = 90.\n2. Kurangi sisanya (satuan): 90 - 2 = 88.\nCara bertahap ini sangat mudah tanpa takut salah meminjam!",
+            options: ["76 balon", "86 balon", "96 balon", "84 balon"],
+            answer: 1,
+            explain: "Kurangi puluhan dulu: 150 - 60 = 90. Lalu kurangi satuannya: 90 - 4 = 86 balon."
+          },
+          {
+            q: "Berapakah hasil dari 300 - 145?",
+            studyExample: "🎯 Contoh Serupa: Hitung 400 - 165!\nTrik Kurangi 1: Kurangi kedua angka dengan 1 agar tidak perlu meminjam dari nol!\n• 400 - 1 = 399\n• 165 - 1 = 164\n• Tinggal kurangi: 399 - 164 = 235!",
+            options: ["145", "155", "165", "255"],
+            answer: 1,
+            explain: "Gunakan trik kurangi 1: (300 - 1 = 299) dikurangi (145 - 1 = 144) -> 299 - 144 = 155."
+          },
+          {
+            q: "Skor tim Merah adalah 240 poin, sedangkan skor tim Biru adalah 175 poin. Berapakah selisih skor kedua tim?",
+            studyExample: "🎯 Contoh Serupa: Cari selisih 230 dan 185 (230 - 185)!\n1. Hitung jarak dari 185 menuju 200 -> butuh +15.\n2. Hitung jarak dari 200 menuju 230 -> butuh +30.\n3. Jumlahkan jaraknya: 15 + 30 = 45.",
+            options: ["55 poin", "65 poin", "75 poin", "85 poin"],
+            answer: 1,
+            explain: "Dari 175 ke 200 berjarak 25 poin. Dari 200 ke 240 berjarak 40 poin. Total selisih: 25 + 40 = 65 poin."
+          }
+        ]
+      },
+      perkalian: {
+        title: "Pos 3: Perkalian (×)",
+        icon: "✖️",
+        color: 0xF59E0B,
+        materi: "Perkalian adalah penjumlahan berulang dari bilangan yang sama. Untuk angka belasan atau puluhan, gunakan Sifat Distributif (pecah menjadi puluhan dan satuan lalu kalikan masing-masing)!",
+        quizzes: [
+          {
+            q: "Berapakah hasil perkalian dari 8 × 7?",
+            studyExample: "🎯 Contoh Serupa: Cara mudah menghitung 8 × 6 jika lupa hafalan:\n1. Kita tahu 5 × 6 = 30 dan 3 × 6 = 18.\n2. Karena 8 adalah (5 + 3), maka tambahkan hasilnya: 30 + 18 = 48!\nSekarang coba pecah 8 × 7 menjadi (5 × 7) + (3 × 7)!",
+            options: ["54", "56", "58", "64"],
+            answer: 1,
+            explain: "(5 × 7 = 35) ditambah (3 × 7 = 21) -> 35 + 21 = 56."
+          },
+          {
+            q: "Di ruang kelas terdapat 14 meja. Setiap meja ditempati oleh 6 siswa. Berapa jumlah seluruh siswa di kelas itu?",
+            studyExample: "🎯 Contoh Serupa: Mari hitung 13 × 5!\n1. Pecah angka 13 menjadi (10 + 3).\n2. Kalikan puluhan: 10 × 5 = 50.\n3. Kalikan satuan: 3 × 5 = 15.\n4. Jumlahkan: 50 + 15 = 65.",
+            options: ["74 siswa", "84 siswa", "94 siswa", "86 siswa"],
+            answer: 1,
+            explain: "14 × 6 -> Pecah menjadi (10 × 6) + (4 × 6) = 60 + 24 = 84 siswa."
+          },
+          {
+            q: "Berapakah hasil dari 25 × 12?",
+            studyExample: "🎯 Contoh Serupa: Hitung 25 × 8 dengan trik lipat & bagi dua!\n1. Ingat bahwa 25 × 4 = 100.\n2. Karena 8 adalah 4 × 2, maka 25 × 8 = 100 × 2 = 200!\nCoba gunakan kelipatan 25 × 4 = 100 untuk menghitung 25 × 12!",
+            options: ["250", "300", "325", "350"],
+            answer: 1,
+            explain: "Pecah 12 menjadi 10 + 2: (25 × 10 = 250) + (25 × 2 = 50) = 300."
+          },
+          {
+            q: "Sebuah truk mengangkut 9 kotak jeruk. Setiap kotak berisi 45 buah jeruk. Berapa total jeruk yang diangkut truk tersebut?",
+            studyExample: "🎯 Contoh Serupa: Trik cepat perkalian 9, misal 9 × 35:\n1. Kalikan dulu dengan 10: 10 × 35 = 350.\n2. Kurangi dengan 1 kali angka itu sendiri (35): 350 - 35 = 315.\nMudah sekali kan? Sekarang coba untuk 9 × 45!",
+            options: ["395 jeruk", "405 jeruk", "415 jeruk", "425 jeruk"],
+            answer: 1,
+            explain: "Gunakan trik ×10 dikurangi 1 kali: (10 × 45) - 45 = 450 - 45 = 405 buah jeruk."
+          }
+        ]
+      },
+      pembagian: {
+        title: "Pos 4: Pembagian (÷)",
+        icon: "➗",
+        color: 0x8B5CF6,
+        materi: "Pembagian adalah pengurangan berulang atau kebalikan langsung dari perkalian! Jika A × B = C, maka C ÷ B = A. Untuk angka besar, pecah angka yang dibagi menjadi bagian bulat yang mudah dibagi.",
+        quizzes: [
+          {
+            q: "Berapakah hasil pembagian dari 72 ÷ 8?",
+            studyExample: "🎯 Contoh Serupa: Mari cari hasil 63 ÷ 7!\n1. Ingat kebalikan perkalian: 7 dikali berapa yang hasilnya 63?\n2. Kita tahu 7 × 10 = 70 (kelebihan 7), berarti mundur 1 langkah: 7 × 9 = 63.\n3. Jadi 63 ÷ 7 = 9.",
+            options: ["7", "8", "9", "10"],
+            answer: 2,
+            explain: "Karena 8 × 9 = 72, maka 72 ÷ 8 = 9."
+          },
+          {
+            q: "Ibu Guru memiliki 96 pensil warna yang akan dibagikan sama rata kepada 6 kelompok belajar. Berapa pensil yang diterima setiap kelompok?",
+            studyExample: "🎯 Contoh Serupa: Hitung 84 ÷ 6 dengan cara memecah angka!\n1. Pecah 84 menjadi angka puluhan yang habis dibagi 6, yaitu 60 + 24.\n2. Bagi bagian pertama: 60 ÷ 6 = 10.\n3. Bagi bagian kedua: 24 ÷ 6 = 4.\n4. Jumlahkan hasilnya: 10 + 4 = 14.",
+            options: ["14 pensil", "15 pensil", "16 pensil", "18 pensil"],
+            answer: 2,
+            explain: "Pecah 96 menjadi 60 + 36. Lalu (60 ÷ 6 = 10) ditambah (36 ÷ 6 = 6) = 16 pensil."
+          },
+          {
+            q: "Berapakah hasil dari 135 ÷ 9?",
+            studyExample: "🎯 Contoh Serupa: Hitung 126 ÷ 9!\n1. Pecah 126 menjadi 90 + 36 (karena 90 adalah 9 × 10).\n2. 90 ÷ 9 = 10.\n3. 36 ÷ 9 = 4.\n4. Totalnya: 10 + 4 = 14.",
+            options: ["13", "14", "15", "16"],
+            answer: 2,
+            explain: "Pecah 135 menjadi 90 + 45. Lalu (90 ÷ 9 = 10) + (45 ÷ 9 = 5) = 15."
+          },
+          {
+            q: "Sebanyak 180 siswa akan berangkat karya wisata menggunakan 5 bus dengan kapasitas sama banyak. Berapa siswa di setiap bus?",
+            studyExample: "🎯 Contoh Serupa: Hitung 160 ÷ 5!\n1. Pecah 160 menjadi 100 + 60.\n2. 100 ÷ 5 = 20.\n3. 60 ÷ 5 = 12.\n4. Jumlahkan keduanya: 20 + 12 = 32.",
+            options: ["32 siswa", "34 siswa", "36 siswa", "38 siswa"],
+            answer: 2,
+            explain: "Pecah 180 menjadi 150 + 30. (150 ÷ 5 = 30) ditambah (30 ÷ 5 = 6) = 36 siswa per bus."
+          }
+        ]
+      },
+      campuran: {
+        title: "Pos 5: Operasi Campuran & Cerita",
+        icon: "🏛️",
+        color: 0x10B981,
+        materi: "Aturan Emas Operasi Hitung Campuran (KABATAKU):1) Kerjakan di dalam Tanda Kurung ( ) terlebih dahulu. 2) Kerjakan Perkalian (×) atau Pembagian (÷) sebelum Penjumlahan (+) dan Pengurangan (-). 3) Jika setara, kerjakan dari kiri ke kanan!",
+        quizzes: [
+          {
+            q: "Berapakah hasil dari 20 + 6 × 8?",
+            studyExample: "🎯 Contoh Serupa: Hitung 15 + 4 × 7!\n⚠️ Ingat aturan: Perkalian lebih kuat daripada Penjumlahan!\n1. Kerjakan perkalian dulu: 4 × 7 = 28.\n2. Baru tambahkan dengan angka depan: 15 + 28 = 43.\n(Jangan menjumlahkan 15 + 4 dulu ya!)",
+            options: ["208", "68", "78", "58"],
+            answer: 1,
+            explain: "Kerjakan perkalian lebih dulu: 6 × 8 = 48. Kemudian tambahkan: 20 + 48 = 68."
+          },
+          {
+            q: "Hitunglah hasil dari (45 - 15) ÷ 5 + 12!",
+            studyExample: "🎯 Contoh Serupa: Hitung (36 - 12) ÷ 4 + 10!\n1. Kerjakan dalam kurung dulu: 36 - 12 = 24.\n2. Lanjutkan pembagian: 24 ÷ 4 = 6.\n3. Terakhir jumlahkan: 6 + 10 = 16.",
+            options: ["16", "18", "20", "24"],
+            answer: 1,
+            explain: "Dalam kurung: (45 - 15) = 30. Lalu bagi: 30 ÷ 5 = 6. Terakhir tambah: 6 + 12 = 18."
+          },
+          {
+            q: "Budi membeli 4 pak buku tulis. Setiap pak berisi 10 buku. Kemudian ia memberikan 7 buku kepada adiknya. Berapa buku Budi sekarang?",
+            studyExample: "🎯 Contoh Serupa: Lani membeli 3 kotak pensil (tiap kotak isi 12), lalu memberikan 5 pensil ke temannya.\n1. Kalikan total awal: 3 × 12 = 36 pensil.\n2. Kurangi yang diberikan: 36 - 5 = 31 pensil.",
+            options: ["31 buku", "33 buku", "35 buku", "47 buku"],
+            answer: 1,
+            explain: "Total buku yang dibeli: 4 × 10 = 40 buku. Dikurangi 7 buku untuk adiknya: 40 - 7 = 33 buku."
+          },
+          {
+            q: "Ibu membuat 100 kue donat. Sebanyak 28 donat dimakan keluarga di rumah, dan sisanya dimasukkan sama rata ke dalam 9 kotak. Berapa isi tiap kotak?",
+            studyExample: "🎯 Contoh Serupa: Ada 80 jeruk, 20 dimakan, sisanya dibagi ke 6 keranjang.\n1. Cari sisa jeruk dulu: 80 - 20 = 60 jeruk.\n2. Bagi rata ke keranjang: 60 ÷ 6 = 10 jeruk per keranjang.",
+            options: ["6 donat", "7 donat", "8 donat", "9 donat"],
+            answer: 2,
+            explain: "Cari sisa donat dulu: 100 - 28 = 72 donat. Lalu dibagi ke 9 kotak: 72 ÷ 9 = 8 donat per kotak."
+          }
+        ]
+      }
+    };
+
+    // Bank Soal 12 Gulungan Matematika di Dunia 3D (Dilengkapi Contoh Cara Mengerjakan / Study Example)
+    const worldScrollChallenges = [
+      {
+        q: "📜 GULUNGAN #1 (Penjumlahan): Berapakah hasil dari 68 + 57?",
+        studyExample: "🎯 Contoh Serupa: Hitung 78 + 46!\n• Puluhan: 70 + 40 = 110\n• Satuan: 8 + 6 = 14\n• Total: 110 + 14 = 124.",
+        options: ["115", "125", "135", "126"],
+        answer: 1,
+        explain: "Puluhan: 60 + 50 = 110. Satuan: 8 + 7 = 15. Total: 110 + 15 = 125."
+      },
+      {
+        q: "📜 GULUNGAN #2 (Pengurangan): Berapakah hasil dari 120 - 48?",
+        studyExample: "🎯 Contoh Serupa: Hitung 130 - 56!\n• Kurangi puluhan dulu: 130 - 50 = 80.\n• Kurangi satuannya: 80 - 6 = 74.",
+        options: ["62", "72", "82", "78"],
+        answer: 1,
+        explain: "120 - 40 = 80, lalu 80 - 8 = 72."
+      },
+      {
+        q: "📜 GULUNGAN #3 (Perkalian): Berapakah hasil dari 9 × 8?",
+        studyExample: "🎯 Contoh Serupa: Hitung 9 × 6!\n• Kalikan 10 dulu: 10 × 6 = 60.\n• Kurangi 6: 60 - 6 = 54.",
+        options: ["64", "72", "81", "74"],
+        answer: 1,
+        explain: "(10 × 8) - 8 = 80 - 8 = 72."
+      },
+      {
+        q: "📜 GULUNGAN #4 (Pembagian): Berapakah hasil dari 84 ÷ 7?",
+        studyExample: "🎯 Contoh Serupa: Hitung 78 ÷ 6!\n• Pecah 78 menjadi 60 + 18.\n• (60 ÷ 6 = 10) + (18 ÷ 6 = 3) = 13.",
+        options: ["11", "12", "13", "14"],
+        answer: 1,
+        explain: "Pecah 84 menjadi 70 + 14. (70 ÷ 7 = 10) + (14 ÷ 7 = 2) = 12."
+      },
+      {
+        q: "📜 GULUNGAN #5 (Penjumlahan): Berapakah hasil dari 185 + 115?",
+        studyExample: "🎯 Contoh Serupa: Hitung 275 + 125!\n• Ratusan: 200 + 100 = 300.\n• Puluhan & satuan: 75 + 25 = 100.\n• Total: 300 + 100 = 400.",
+        options: ["290", "300", "310", "280"],
+        answer: 1,
+        explain: "100 + 100 = 200, dan 85 + 15 = 100. Jadi 200 + 100 = 300."
+      },
+      {
+        q: "📜 GULUNGAN #6 (Pengurangan): Berapakah hasil dari 250 - 85?",
+        studyExample: "🎯 Contoh Serupa: Hitung 240 - 75!\n• 240 - 70 = 170.\n• 170 - 5 = 165.",
+        options: ["155", "165", "175", "145"],
+        answer: 1,
+        explain: "250 - 80 = 170, kemudian 170 - 5 = 165."
+      },
+      {
+        q: "📜 GULUNGAN #7 (Perkalian): Berapakah hasil dari 16 × 5?",
+        studyExample: "🎯 Contoh Serupa: Hitung 18 × 5!\n• Pecah 18 menjadi 10 + 8.\n• (10 × 5 = 50) + (8 × 5 = 40) = 90.",
+        options: ["70", "75", "80", "85"],
+        answer: 2,
+        explain: "(10 × 5 = 50) + (6 × 5 = 30) = 80."
+      },
+      {
+        q: "📜 GULUNGAN #8 (Pembagian): Berapakah hasil dari 144 ÷ 12?",
+        studyExample: "🎯 Contoh Serupa: Hitung 132 ÷ 12!\n• Pecah 132 menjadi 120 + 12.\n• (120 ÷ 12 = 10) + (12 ÷ 12 = 1) = 11.",
+        options: ["11", "12", "13", "14"],
+        answer: 1,
+        explain: "Pecah 144 menjadi 120 + 24. (120 ÷ 12 = 10) + (24 ÷ 12 = 2) = 12."
+      },
+      {
+        q: "📜 GULUNGAN #9 (Operasi Campuran): Berapakah hasil dari 50 - 7 × 5?",
+        studyExample: "🎯 Contoh Serupa: Hitung 40 - 6 × 4!\n• Kerjakan perkalian dulu: 6 × 4 = 24.\n• Baru kurangi: 40 - 24 = 16.",
+        options: ["15", "25", "215", "35"],
+        answer: 0,
+        explain: "Kalikan dulu 7 × 5 = 35. Lalu kurangi: 50 - 35 = 15."
+      },
+      {
+        q: "📜 GULUNGAN #10 (Perkalian Cerita): Sebuah rak memiliki 7 baris. Setiap baris memuat 15 piala. Berapa total piala di rak itu?",
+        studyExample: "🎯 Contoh Serupa: 6 baris × 14 piala:\n• (6 × 10 = 60) + (6 × 4 = 24) = 84 piala.",
+        options: ["95 piala", "105 piala", "115 piala", "100 piala"],
+        answer: 1,
+        explain: "7 × 15 = (7 × 10) + (7 × 5) = 70 + 35 = 105 piala."
+      },
+      {
+        q: "📜 GULUNGAN #11 (Pembagian Cerita): Ayah memetik 108 buah jeruk dan membaginya sama rata ke dalam 9 kantong. Berapa jeruk di tiap kantong?",
+        studyExample: "🎯 Contoh Serupa: 96 jeruk dibagi ke 8 kantong:\n• Pecah 96 = 80 + 16.\n• (80 ÷ 8 = 10) + (16 ÷ 8 = 2) = 12 jeruk.",
+        options: ["11 jeruk", "12 jeruk", "13 jeruk", "14 jeruk"],
+        answer: 1,
+        explain: "108 ÷ 9 -> Pecah menjadi (90 ÷ 9 = 10) + (18 ÷ 9 = 2) = 12 jeruk."
+      },
+      {
+        q: "📜 GULUNGAN #12 (Operasi Campuran): Berapakah hasil dari (18 + 22) × 3?",
+        studyExample: "🎯 Contoh Serupa: Hitung (14 + 16) × 4!\n• Kerjakan dalam kurung dulu: 14 + 16 = 30.\n• Kalikan: 30 × 4 = 120.",
+        options: ["100", "110", "120", "130"],
+        answer: 2,
+        explain: "Jumlahkan dalam kurung dulu: 18 + 22 = 40. Lalu kalikan: 40 × 3 = 120."
+      }
+    ];
+
+    /* =====================================================================
+       3. STATE PEMAIN LOKAL & MULTIPLAYER CLOUD SYNC
+       ===================================================================== */
+    const TEACHER_ADMIN_TOKEN = "GURU123";
+
+    let mySessionId = sessionStorage.getItem("roblox_math_player_id");
+    if (!mySessionId) {
+      mySessionId = "player_" + Date.now().toString(36) + "_" + Math.random().toString(36).substring(2, 8);
+      sessionStorage.setItem("roblox_math_player_id", mySessionId);
+    }
+
+    window.gameState = {
+      myId: mySessionId,
+      myName: "Petualang Cerdas",
+      myColor: "#EF4444",
+      myScore: 0,
+      myLevel: 1,
+      playMode: "team",
+      roomCode: "MATEMATIKA1",
+      role: "student",
+      isTeacherVerified: false,
+      hasJoinedGame: false,
+      speechText: "",
+      speechTimestamp: 0,
+      chatText: "",
+      chatTimestamp: 0,
+      players: [
+        { id: 0, name: "Petualang Cerdas", score: 0, level: 1, color: "#EF4444", hex: 0xEF4444 }
+      ],
+      activeTurnIndex: 0,
+      scrollsFound: 0,
+      totalScrolls: 12,
+      uniform: "sd",
+      accessory: "none",
+      curriculum: defaultCurriculum
+    };
+    const gameState = window.gameState;
+
+    let onlinePlayersMap = {}; 
+    const remotePlayerRigs = {};
+
+    function calcLevelFromScore(score) {
+      return Math.floor(score / 50) + 1;
+    }
+
+    function switchLobbyMode(mode) {
+      document.getElementById('tab-mode-personal').classList.toggle('active', mode === 'personal');
+      document.getElementById('tab-mode-team').classList.toggle('active', mode === 'team');
+      document.getElementById('tab-mode-teacher').classList.toggle('active', mode === 'teacher');
+
+      const tokenBox = document.getElementById('teacher-token-box');
+      const roomBox = document.getElementById('room-code-box');
+      const inputsGrid = document.getElementById('lobby-inputs-grid');
+      const roomInput = document.getElementById('input-room-code');
+      const label = document.getElementById('room-code-label');
+      const genBtn = document.getElementById('btn-gen-code');
+      const joinBtn = document.getElementById('btn-join-game');
+
+      if (mode === 'personal') {
+        gameState.playMode = 'personal';
+        gameState.role = 'student';
+        tokenBox.style.display = 'none';
+        roomBox.style.display = 'none';
+        inputsGrid.style.gridTemplateColumns = '1fr';
+        joinBtn.innerText = "👤 Mulai Bermain Personal (Solo Mode)";
+      } else if (mode === 'team') {
+        gameState.playMode = 'team';
+        gameState.role = 'student';
+        tokenBox.style.display = 'none';
+        roomBox.style.display = 'block';
+        inputsGrid.style.gridTemplateColumns = window.innerWidth <= 820 ? '1fr' : '1fr 1fr';
+        roomInput.removeAttribute('readonly');
+        roomInput.style.cursor = 'text';
+        label.innerText = "🔑 Masukkan Kode Join Team / Kelas";
+        genBtn.style.display = 'none';
+        joinBtn.innerText = "🤝 Gabung Join Team & Masuk Dunia 3D!";
+      } else if (mode === 'teacher') {
+        gameState.playMode = 'team';
+        gameState.role = 'teacher';
+        tokenBox.style.display = 'block';
+        roomBox.style.display = 'block';
+        inputsGrid.style.gridTemplateColumns = window.innerWidth <= 820 ? '1fr' : '1fr 1fr';
+        if (gameState.isTeacherVerified) {
+          roomInput.removeAttribute('readonly');
+          roomInput.style.cursor = 'text';
+          label.innerText = "🔑 Buat / Ubah Kode Tim (Akses Guru Terbuka)";
+          genBtn.style.display = 'inline-block';
+        } else {
+          roomInput.setAttribute('readonly', true);
+          roomInput.style.cursor = 'not-allowed';
+          label.innerText = "🔒 Kode Terkunci (Masukkan Token Admin dulu)";
+          genBtn.style.display = 'none';
+        }
+        joinBtn.innerText = "👨‍🏫 Masuk sebagai Guru & Pantau Tim!";
+      }
+    }
+
+    function verifyTeacherTokenLobby() {
+      const tokenVal = document.getElementById('input-admin-token').value.trim();
+      const statusMsg = document.getElementById('token-status-msg');
+      const roomInput = document.getElementById('input-room-code');
+      const genBtn = document.getElementById('btn-gen-code');
+      const label = document.getElementById('room-code-label');
+
+      if (tokenVal.toUpperCase() === TEACHER_ADMIN_TOKEN) {
+        gameState.isTeacherVerified = true;
+        roomInput.removeAttribute('readonly');
+        roomInput.style.cursor = 'text';
+        roomInput.focus();
+        genBtn.style.display = 'inline-block';
+        label.innerText = "🔑 Buat / Ubah Kode Tim (Akses Guru Terbuka)";
+        statusMsg.style.color = "#34D399";
+        statusMsg.innerHTML = "✅ <strong>Token Admin Valid!</strong> Sekarang Bapak/Ibu Guru dapat mengubah atau mengacak Kode Kelas.";
+        audio.playCorrect();
+        showToast("Akses Guru Terbuka! Silakan atur Kode Kelas.", "🔓");
+      } else {
+        statusMsg.style.color = "#F43F5E";
+        statusMsg.innerHTML = "❌ <strong>Token Admin Salah!</strong> Gunakan token <strong>GURU123</strong>.";
+        audio.playWrong();
+        showToast("Token Admin tidak sesuai!", "⚠️");
+      }
+    }
+
+    function generateNewRoomCode() {
+      if (!gameState.isTeacherVerified) {
+        showToast("Masukkan Token Admin Guru terlebih dahulu!", "🔒");
+        return;
+      }
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "MAT";
+      for (let i = 0; i < 3; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      document.getElementById('input-room-code').value = code;
+      if (window.publishOfficialRoomCode) {
+        window.publishOfficialRoomCode(code);
+      }
+      showToast(`Kode Kelas Baru Dibuat: ${code}. Seluruh perangkat siswa akan disinkronkan!`, "👨‍🏫");
+    }
+
+    function randomizeTeacherModalCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "MAT";
+      for (let i = 0; i < 3; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      document.getElementById('modal-new-room-code').value = code;
+    }
+
+    function changeRoomCodeByTeacher() {
+      const tokenVal = document.getElementById('modal-teacher-token').value.trim();
+      const newCode = document.getElementById('modal-new-room-code').value.trim().toUpperCase();
+
+      if (tokenVal.toUpperCase() !== TEACHER_ADMIN_TOKEN) {
+        audio.playWrong();
+        showToast("Token Admin Salah! Hanya Guru yang dapat mengubah Kode Kelas.", "🔒");
+        return;
+      }
+      if (!newCode || newCode.length < 3) {
+        showToast("Masukkan Kode Kelas baru minimal 3 karakter!", "⚠️");
+        return;
+      }
+
+      gameState.isTeacherVerified = true;
+      gameState.playMode = 'team';
+      gameState.roomCode = newCode.replace(/[^A-Z0-9]/gi, '');
+      document.getElementById('input-room-code').value = gameState.roomCode;
+      document.getElementById('hud-room-code').innerText = gameState.roomCode;
+      document.getElementById('chat-room-badge').innerText = gameState.roomCode;
+      document.getElementById('leaderboard-room-label').innerText = gameState.roomCode;
+
+      if (window.publishOfficialRoomCode) {
+        window.publishOfficialRoomCode(gameState.roomCode);
+      }
+      if (window.connectToCloudRoom) {
+        window.connectToCloudRoom(gameState.roomCode);
+      }
+
+      audio.playLevelUp();
+      showToast(`✅ Kode Join Team berhasil diubah menjadi [${gameState.roomCode}]!`, "👨‍🏫");
+      closeModal('modal-teacher');
+    }
+
+    function selectLobbyColor(hexStr, el) {
+      gameState.myColor = hexStr;
+      document.querySelectorAll('#lobby-color-picker .color-choice').forEach(c => c.classList.remove('selected'));
+      if (el) el.classList.add('selected');
+      if (typeof partyRigs !== 'undefined' && partyRigs[0]) {
+        partyRigs[0].mats.shirt.color.setStyle(hexStr);
+      }
+    }
+
+    function joinMultiplayerRoom() {
+      const nameInput = document.getElementById('input-player-name').value.trim() || "Siswa_" + Math.floor(10 + Math.random() * 89);
+      const rawCode = (document.getElementById('input-room-code').value.trim() || gameState.roomCode || "MATEMATIKA1").toUpperCase();
+      const codeInput = rawCode.replace(/[^A-Z0-9]/gi, '') || "MATEMATIKA1";
+
+      gameState.myName = nameInput;
+      gameState.hasJoinedGame = true;
+      gameState.myLevel = calcLevelFromScore(gameState.myScore);
+
+      if (gameState.playMode === 'personal') {
+        gameState.roomCode = "PERSONAL";
+        if (window.disconnectCloudRoom) {
+          window.disconnectCloudRoom();
+        }
+        if (window.syncRemotePlayersFromCloud) {
+          window.syncRemotePlayersFromCloud({});
+        }
+        document.getElementById('chat-widget').classList.add('minimized');
+      } else {
+        gameState.roomCode = codeInput;
+        document.getElementById('chat-widget').classList.remove('minimized');
+      }
+
+      if (typeof partyRigs !== 'undefined' && partyRigs[0]) {
+        const spawnOffsetX = (Math.random() - 0.5) * 6;
+        const spawnOffsetZ = 18 + (Math.random() - 0.5) * 4;
+        partyRigs[0].group.position.set(spawnOffsetX, 0, spawnOffsetZ);
+      }
+
+      if (gameState.playMode === 'team' && gameState.role === 'teacher' && gameState.isTeacherVerified && window.publishOfficialRoomCode) {
+        window.publishOfficialRoomCode(gameState.roomCode);
+      }
+
+      gameState.players[0].name = gameState.myName;
+      gameState.players[0].color = gameState.myColor;
+      gameState.players[0].score = gameState.myScore;
+      gameState.players[0].level = gameState.myLevel;
+
+      if (typeof partyRigs !== 'undefined' && partyRigs[0]) {
+        partyRigs[0].mats.shirt.color.setStyle(gameState.myColor);
+      }
+
+      document.getElementById('registration-overlay').style.display = 'none';
+      if (gameState.playMode === 'team') {
+        document.getElementById('input-room-code').value = gameState.roomCode;
+      }
+      document.getElementById('hud-room-code').innerText = gameState.playMode === 'personal' ? 'PERSONAL (SOLO)' : gameState.roomCode;
+      document.getElementById('chat-room-badge').innerText = gameState.playMode === 'personal' ? 'SOLO' : gameState.roomCode;
+      document.getElementById('leaderboard-room-label').innerText = gameState.playMode === 'personal' ? 'MODE PERSONAL' : gameState.roomCode;
+
+      audio.playLevelUp();
+      updatePartyFloatingLabels();
+      saveState();
+
+      if (gameState.playMode === 'team' && window.connectToCloudRoom) {
+        window.connectToCloudRoom(gameState.roomCode);
+        showToast(`🤝 Bergabung ke Tim [${gameState.roomCode}] sebagai ${gameState.myName}!`, "🌐");
+      } else {
+        showToast(`👤 Memulai Petualangan Matematika sebagai ${gameState.myName}!`, "🚀");
+      }
+    }
+
+    function openRegistrationModal() {
+      document.getElementById('input-player-name').value = gameState.myName;
+      if (gameState.roomCode && gameState.roomCode !== 'PERSONAL') {
+        document.getElementById('input-room-code').value = gameState.roomCode;
+      }
+      if (gameState.role === 'teacher') {
+        switchLobbyMode('teacher');
+      } else if (gameState.playMode === 'personal') {
+        switchLobbyMode('personal');
+      } else {
+        switchLobbyMode('team');
+      }
+      document.getElementById('registration-overlay').style.display = 'flex';
+    }
+
+    function saveState() {
+      gameState.myLevel = calcLevelFromScore(gameState.myScore);
+      gameState.players[0].name = gameState.myName;
+      gameState.players[0].score = gameState.myScore;
+      gameState.players[0].level = gameState.myLevel;
+      gameState.players[0].color = gameState.myColor;
+      updateHUD();
+      if (window.pushMyStateToCloud) {
+        window.pushMyStateToCloud(true);
+      }
+    }
+
+    function loadSavedState() {
+      updateHUD();
+    }
+
+    function awardPlayerPoints(playerIdx, pts) {
+      const prevLevel = gameState.myLevel;
+      gameState.myScore += pts;
+      gameState.myLevel = calcLevelFromScore(gameState.myScore);
+      if (gameState.myLevel > prevLevel) {
+        audio.playLevelUp();
+        showToast(`🎉 NAIK LEVEL! Kamu sekarang mencapai LEVEL ${gameState.myLevel}!`, "⭐");
+      }
+      saveState();
+      updatePartyFloatingLabels();
+    }
+
+    function showToast(msg, icon = "🌟") {
+      const banner = document.getElementById("toast-banner");
+      document.getElementById("toast-msg").innerText = msg;
+      document.getElementById("toast-icon").innerText = icon;
+      banner.classList.add("show");
+      setTimeout(() => banner.classList.remove("show"), 3400);
+    }
+
+    /* =====================================================================
+       4. ENGINE 3D THREE.JS & DUNIA PETUALANGAN MATEMATIKA
+       ===================================================================== */
+    const canvas = document.getElementById('game-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x7DD3FC);
+    scene.fog = new THREE.FogExp2(0x7DD3FC, 0.013);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 0.95);
+    sunLight.position.set(45, 75, 35);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    const shadowD = 70;
+    sunLight.shadow.camera.left = -shadowD;
+    sunLight.shadow.camera.right = shadowD;
+    sunLight.shadow.camera.top = shadowD;
+    sunLight.shadow.camera.bottom = -shadowD;
+    scene.add(sunLight);
+
+    const interactiveZones = [];
+    const animatedCollectibles = [];
+    const npcs = [];
+    const fountainDrops = [];
+
+    const materials = {
+      grass: new THREE.MeshLambertMaterial({ color: 0x48BB78 }),
+      road: new THREE.MeshLambertMaterial({ color: 0x334155 }),
+      sidewalk: new THREE.MeshLambertMaterial({ color: 0xCBD5E1 }),
+      roadMarking: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+      fountainWater: new THREE.MeshLambertMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.8 }),
+      trunk: new THREE.MeshLambertMaterial({ color: 0x78350F }),
+      leaves: new THREE.MeshLambertMaterial({ color: 0x15803D }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xF59E0B, metalness: 0.85, roughness: 0.2 }),
+      scrollPaper: new THREE.MeshStandardMaterial({ color: 0xFDE047, emissive: 0xF59E0B, emissiveIntensity: 0.35 })
+    };
+
+    const groundGeo = new THREE.PlaneGeometry(250, 250);
+    const groundMesh = new THREE.Mesh(groundGeo, materials.grass);
+    groundMesh.rotation.x = -Math.PI / 2;
+    groundMesh.receiveShadow = true;
+    scene.add(groundMesh);
+
+    function createRoadGrid() {
+      const roadGroup = new THREE.Group();
+      const roadW = 10;
+
+      const r1 = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 230), materials.road);
+      r1.rotation.x = -Math.PI / 2;
+      r1.position.y = 0.02;
+      r1.receiveShadow = true;
+      roadGroup.add(r1);
+
+      const r2 = new THREE.Mesh(new THREE.PlaneGeometry(230, roadW), materials.road);
+      r2.rotation.x = -Math.PI / 2;
+      r2.position.y = 0.02;
+      r2.receiveShadow = true;
+      roadGroup.add(r2);
+
+      const swH = 0.16;
+      const swGeoX = new THREE.BoxGeometry(230, swH, 1.8);
+      const sw1 = new THREE.Mesh(swGeoX, materials.sidewalk);
+      sw1.position.set(0, swH / 2, 5.9);
+      roadGroup.add(sw1);
+
+      const sw2 = sw1.clone();
+      sw2.position.set(0, swH / 2, -5.9);
+      roadGroup.add(sw2);
+
+      const swGeoZ = new THREE.BoxGeometry(1.8, swH, 230);
+      const sw3 = new THREE.Mesh(swGeoZ, materials.sidewalk);
+      sw3.position.set(5.9, swH / 2, 0);
+      roadGroup.add(sw3);
+
+      const sw4 = sw3.clone();
+      sw4.position.set(-5.9, swH / 2, 0);
+      roadGroup.add(sw4);
+
+      for (let i = -100; i <= 100; i += 8) {
+        if (Math.abs(i) < 16) continue;
+        const dash1 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 4), materials.roadMarking);
+        dash1.rotation.x = -Math.PI / 2;
+        dash1.position.set(0, 0.03, i);
+        roadGroup.add(dash1);
+
+        const dash2 = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.5), materials.roadMarking);
+        dash2.rotation.x = -Math.PI / 2;
+        dash2.position.set(i, 0.03, 0);
+        roadGroup.add(dash2);
+      }
+
+      scene.add(roadGroup);
+    }
+    createRoadGrid();
+
+    function createCitySquare() {
+      const squareGroup = new THREE.Group();
+      const plaza = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.25, 32), materials.sidewalk);
+      plaza.position.set(0, 0.12, 0);
+      squareGroup.add(plaza);
+
+      const basin1 = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6, 1.2, 24), new THREE.MeshLambertMaterial({ color: 0x94A3B8 }));
+      basin1.position.set(0, 0.7, 0);
+      squareGroup.add(basin1);
+
+      const water1 = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.2, 24), materials.fountainWater);
+      water1.position.set(0, 1.2, 0);
+      squareGroup.add(water1);
+
+      const centerPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 3.4, 16), new THREE.MeshLambertMaterial({ color: 0xCBD5E1 }));
+      centerPillar.position.set(0, 1.7, 0);
+      squareGroup.add(centerPillar);
+
+      const dropGeo = new THREE.DodecahedronGeometry(0.1, 0);
+      const dropMat = new THREE.MeshBasicMaterial({ color: 0xE0F2FE });
+      for (let i = 0; i < 24; i++) {
+        const drop = new THREE.Mesh(dropGeo, dropMat);
+        drop.position.set(0, 3.2, 0);
+        const angle = (i / 24) * Math.PI * 2;
+        const speed = 0.035 + Math.random() * 0.02;
+        fountainDrops.push({
+          mesh: drop,
+          velX: Math.cos(angle) * speed,
+          velZ: Math.sin(angle) * speed,
+          velY: 0.08 + Math.random() * 0.05,
+          startY: 3.2
+        });
+        squareGroup.add(drop);
+      }
+      scene.add(squareGroup);
+    }
+    createCitySquare();
+
+    for (let i = 0; i < 28; i++) {
+      const x = (Math.random() - 0.5) * 180;
+      const z = (Math.random() - 0.5) * 180;
+      if (Math.abs(x) < 18 || Math.abs(z) < 18) continue;
+
+      const tree = new THREE.Group();
+      const trunkH = 2.4 + Math.random() * 1.5;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, trunkH, 8), materials.trunk);
+      trunk.position.y = trunkH / 2;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.7 + Math.random() * 0.8, 1), materials.leaves);
+      crown.position.y = trunkH + 1.2;
+      crown.castShadow = true;
+      tree.add(crown);
+
+      tree.position.set(x, 0, z);
+      scene.add(tree);
+    }
+
+    function createBillboardTexture(titleText, colorHex) {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 160;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = colorHex;
+      ctx.roundRect(10, 10, 492, 140, 24);
+      ctx.fill();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 35px Nunito, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(titleText, 256, 80);
+      return new THREE.CanvasTexture(c);
+    }
+
+    // 5 Pos Gedung Tantangan Matematika
+    const buildingData = [
+      { key: "penjumlahan", name: "Pos 1: Penjumlahan (+)", color: 0xEF4444, hex: "#EF4444", pos: [40, 0, 40], rot: -Math.PI / 4, icon: "➕" },
+      { key: "pengurangan", name: "Pos 2: Pengurangan (-)", color: 0x3B82F6, hex: "#3B82F6", pos: [-40, 0, 40], rot: Math.PI / 4, icon: "➖" },
+      { key: "perkalian", name: "Pos 3: Perkalian (×)", color: 0xF59E0B, hex: "#F59E0B", pos: [-40, 0, -40], rot: 3 * Math.PI / 4, icon: "✖️" },
+      { key: "pembagian", name: "Pos 4: Pembagian (÷)", color: 0x8B5CF6, hex: "#8B5CF6", pos: [40, 0, -40], rot: -3 * Math.PI / 4, icon: "➗" },
+      { key: "campuran", name: "Pos 5: Hitung Campuran", color: 0x10B981, hex: "#10B981", pos: [0, 0, -56], rot: Math.PI, icon: "🏛️" }
+    ];
+
+    buildingData.forEach(b => {
+      const bGroup = new THREE.Group();
+      const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(16, 12, 18), new THREE.MeshLambertMaterial({ color: b.color }));
+      mainBuilding.position.y = 6;
+      mainBuilding.castShadow = true;
+      bGroup.add(mainBuilding);
+
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(13.2, 6.2, 4), new THREE.MeshLambertMaterial({ color: 0x1E293B }));
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 15.1;
+      bGroup.add(roof);
+
+      const door = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6, 0.4), new THREE.MeshLambertMaterial({ color: 0x0F172A }));
+      door.position.set(0, 3, 9.1);
+      bGroup.add(door);
+
+      const labelTex = createBillboardTexture(b.name, b.hex);
+      const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(9.2, 2.7), new THREE.MeshBasicMaterial({ map: labelTex, transparent: true }));
+      labelMesh.position.set(0, 13.5, 9.4);
+      bGroup.add(labelMesh);
+
+      const padMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.6, 2.8, 0.25, 24),
+        new THREE.MeshStandardMaterial({ color: b.color, emissive: b.color, emissiveIntensity: 0.65, transparent: true, opacity: 0.85 })
+      );
+      padMesh.position.set(0, 0.15, 12.5);
+      bGroup.add(padMesh);
+
+      bGroup.position.set(...b.pos);
+      bGroup.rotation.y = b.rot;
+      scene.add(bGroup);
+
+      const worldPadPos = new THREE.Vector3(0, 0.2, 12.5).applyEuler(bGroup.rotation).add(bGroup.position);
+      interactiveZones.push({
+        type: 'building',
+        key: b.key,
+        name: b.name,
+        icon: b.icon,
+        pos: worldPadPos,
+        radius: 3.8,
+        mesh: padMesh
+      });
+    });
+
+    function spawnWorldScrollsAndCoins() {
+      const scrollPositions = [
+        [18, 18], [-18, 18], [-18, -18], [18, -18],
+        [0, 32], [0, -32], [32, 0], [-32, 0],
+        [25, 48], [-25, 48], [-25, -48], [25, -48]
+      ];
+
+      scrollPositions.forEach((coords, idx) => {
+        const scrollGroup = new THREE.Group();
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.35, 16), materials.scrollPaper);
+        cyl.rotation.z = Math.PI / 4;
+        scrollGroup.add(cyl);
+
+        const ribbon = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.25, 16), new THREE.MeshBasicMaterial({ color: 0xEF4444 }));
+        ribbon.rotation.z = Math.PI / 4;
+        scrollGroup.add(ribbon);
+
+        scrollGroup.position.set(coords[0], 1.5, coords[1]);
+        scene.add(scrollGroup);
+
+        animatedCollectibles.push({
+          type: 'scroll',
+          challengeIdx: idx,
+          mesh: scrollGroup,
+          basePos: scrollGroup.position.clone()
+        });
+      });
+
+      const coinGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.16, 16);
+      coinGeo.rotateX(Math.PI / 2);
+      for (let i = 0; i < 12; i++) {
+        const coin = new THREE.Mesh(coinGeo, materials.gold);
+        const angle = (i / 12) * Math.PI * 2;
+        const dist = 12 + (i % 3) * 14;
+        coin.position.set(Math.cos(angle) * dist, 1.2, Math.sin(angle) * dist);
+        scene.add(coin);
+        animatedCollectibles.push({ type: 'coin', mesh: coin, basePos: coin.position.clone() });
+      }
+    }
+    spawnWorldScrollsAndCoins();
+
+    function createNPC(name, x, z, dialogue) {
+      const npcGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.6), new THREE.MeshLambertMaterial({ color: 0x0284C7 }));
+      body.position.y = 1.1;
+      npcGroup.add(body);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshLambertMaterial({ color: 0xFFDBAC }));
+      head.position.y = 2.0;
+      npcGroup.add(head);
+
+      const exC = document.createElement('canvas');
+      exC.width = 128; exC.height = 128;
+      const ctx = exC.getContext('2d');
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 84px Nunito'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('!', 64, 66);
+
+      const exMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(exC), transparent: true, side: THREE.DoubleSide }));
+      exMesh.position.y = 3.15;
+      npcGroup.add(exMesh);
+
+      npcGroup.position.set(x, 0, z);
+      scene.add(npcGroup);
+
+      interactiveZones.push({
+        type: 'npc',
+        name: name,
+        dialogue: dialogue,
+        pos: new THREE.Vector3(x, 1, z),
+        radius: 3.2,
+        exMesh: exMesh
+      });
+      npcs.push({ group: npcGroup, exMesh: exMesh });
+    }
+
+    createNPC("Pak Budi (Guru Matematika)", 11, 12, "Saat mengerjakan soal di Pos maupun Gulungan, tekan tombol '💡 Pelajari Cara Mengerjakan' untuk melihat contoh soal serupa beserta langkah hitungnya!");
+    createNPC("Rani (Penjaga Sertifikat)", -11, 12, "Kumpulkan 12 Gulungan Angka di jalanan kota dan taklukkan 5 Pos Matematika! Peraih skor tertinggi bisa langsung mengunduh Sertifikat Juara PNG & PDF!");
+
+    /* =====================================================================
+       5. KARAKTER PEMAIN LOKAL & PEMAIN MULTIPLAYER ONLINE 3D
+       ===================================================================== */
+    function createNameplateCanvas(nameText, levelNum, scoreNum, borderColor, speechBubbleText = "", isChampion = false) {
+      const c = document.createElement('canvas');
+      c.width = 400;
+      c.height = 145;
+      const ctx = c.getContext('2d');
+
+      if (speechBubbleText) {
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.96)';
+        ctx.roundRect(14, 4, 372, 42, 14);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#A7F3D0';
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 19px Nunito, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const shortSpeech = speechBubbleText.length > 28 ? speechBubbleText.substring(0, 28) + "..." : speechBubbleText;
+        ctx.fillText(`🎙️ "${shortSpeech}"`, 200, 25);
+      }
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.roundRect(20, 52, 360, 82, 18);
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = isChampion ? '#FBBF24' : (borderColor || '#38BDF8');
+      ctx.stroke();
+
+      ctx.fillStyle = '#F7E43B';
+      ctx.font = '900 23px Nunito, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const displayTitle = isChampion ? `👑 ${nameText}` : nameText;
+      ctx.fillText(displayTitle, 200, 76);
+
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+      ctx.roundRect(44, 96, 312, 28, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#FDE047';
+      ctx.font = '900 18px Nunito, sans-serif';
+      ctx.fillText(`⭐ LEVEL ${levelNum}   •   🏆 ${scoreNum} POIN`, 200, 111);
+
+      return new THREE.CanvasTexture(c);
+    }
+
+    function buildCharacterRig(shirtColorHex, pantsColorHex, nameText, badgeColorStr, levelNum = 1, scoreNum = 0) {
+      const group = new THREE.Group();
+      const mats = {
+        skin: new THREE.MeshLambertMaterial({ color: 0xFCD34D }),
+        hair: new THREE.MeshLambertMaterial({ color: 0x3B2F2F }),
+        shirt: new THREE.MeshLambertMaterial({ color: shirtColorHex }),
+        pants: new THREE.MeshLambertMaterial({ color: pantsColorHex })
+      };
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mats.skin);
+      head.position.y = 2.05;
+      head.castShadow = true;
+      group.add(head);
+
+      const hair = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.35, 0.76), mats.hair);
+      hair.position.set(0, 2.32, 0);
+      group.add(hair);
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.55), mats.shirt);
+      body.position.y = 1.35;
+      body.castShadow = true;
+      group.add(body);
+
+      const legGeo = new THREE.BoxGeometry(0.35, 0.85, 0.4);
+      const leftLeg = new THREE.Mesh(legGeo, mats.pants);
+      leftLeg.position.set(-0.25, 0.5, 0);
+      group.add(leftLeg);
+
+      const rightLeg = new THREE.Mesh(legGeo, mats.pants);
+      rightLeg.position.set(0.25, 0.5, 0);
+      group.add(rightLeg);
+
+      const armGeo = new THREE.BoxGeometry(0.25, 0.75, 0.3);
+      const leftArm = new THREE.Mesh(armGeo, mats.shirt);
+      leftArm.position.set(-0.62, 1.35, 0);
+      group.add(leftArm);
+
+      const rightArm = new THREE.Mesh(armGeo, mats.shirt);
+      rightArm.position.set(0.62, 1.35, 0);
+      group.add(rightArm);
+
+      const accGroup = new THREE.Group();
+      group.add(accGroup);
+
+      const footRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.65, 0.88, 24),
+        new THREE.MeshBasicMaterial({ color: shirtColorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      );
+      footRing.rotation.x = -Math.PI / 2;
+      footRing.position.y = 0.05;
+      group.add(footRing);
+
+      const npTex = createNameplateCanvas(nameText, levelNum, scoreNum, badgeColorStr, "", false);
+      const npMat = new THREE.MeshBasicMaterial({ map: npTex, transparent: true, depthTest: false });
+      const npMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 1.28), npMat);
+      npMesh.position.y = 3.35;
+      npMesh.renderOrder = 999;
+      group.add(npMesh);
+
+      return {
+        group,
+        mats,
+        leftLeg,
+        rightLeg,
+        leftArm,
+        rightArm,
+        accGroup,
+        footRing,
+        npMesh,
+        targetPos: new THREE.Vector3(),
+        targetRotY: 0,
+        walkPhase: Math.random() * 10
+      };
+    }
+
+    const partyRigs = [
+      buildCharacterRig(0xEF4444, 0x1E293B, "Petualang Cerdas", "#EF4444", 1, 0)
+    ];
+
+    partyRigs[0].group.position.set(0, 0, 20);
+    scene.add(partyRigs[0].group);
+
+    window.playerGroup = partyRigs[0].group;
+    const playerGroup = window.playerGroup;
+    const leaderTrail = [];
+
+    function updatePartyFloatingLabels() {
+      const rig = partyRigs[0];
+      const activeSpeech = (Date.now() - gameState.speechTimestamp < 6000) ? gameState.speechText : "";
+      const sorted = typeof getAllRoomPlayersSorted === 'function' ? getAllRoomPlayersSorted() : [];
+      const isChamp = sorted.length > 0 && sorted[0].uid === gameState.myId && gameState.myScore > 0;
+      const newTex = createNameplateCanvas(
+        gameState.myName,
+        gameState.myLevel,
+        gameState.myScore,
+        gameState.myColor,
+        activeSpeech,
+        isChamp
+      );
+      if (rig.npMesh.material.map) rig.npMesh.material.map.dispose();
+      rig.npMesh.material.map = newTex;
+      rig.npMesh.material.needsUpdate = true;
+      if (rig.footRing) rig.footRing.material.color.setStyle(gameState.myColor);
+    }
+
+    const outfitPresets = {
+      sd: { name: "Tim Merah-Biru", shirt: 0xEF4444, pants: 0x1E293B, icon: "🎒" },
+      smp: { name: "Seragam SMP", shirt: 0xFFFFFF, pants: 0x2563EB, icon: "📘" },
+      sma: { name: "Seragam SMA", shirt: 0xFFFFFF, pants: 0x64748B, icon: "🎓" },
+      pramuka: { name: "Pramuka Keren", shirt: 0xD97706, pants: 0x78350F, icon: "🏕️" },
+      batik: { name: "Batik Nusantara", shirt: 0x9333EA, pants: 0x1E293B, icon: "✨" }
+    };
+
+    function applyOutfit(key) {
+      const preset = outfitPresets[key] || outfitPresets.sd;
+      partyRigs[0].mats.shirt.color.setHex(preset.shirt);
+      partyRigs[0].mats.pants.color.setHex(preset.pants);
+      gameState.uniform = key;
+      saveState();
+      renderWardrobeUI();
+    }
+
+    function applyAccessory(type) {
+      gameState.accessory = type;
+      const accGroup = partyRigs[0].accGroup;
+      while (accGroup.children.length > 0) accGroup.remove(accGroup.children[0]);
+
+      if (type === 'cap') {
+        const cap = new THREE.Group();
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.44, 0.25, 16), new THREE.MeshLambertMaterial({ color: 0xDC2626 }));
+        crown.position.set(0, 2.52, 0);
+        cap.add(crown);
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.4), new THREE.MeshLambertMaterial({ color: 0xFFFFFF }));
+        visor.position.set(0, 2.45, 0.4);
+        cap.add(visor);
+        accGroup.add(cap);
+      } else if (type === 'glasses') {
+        const frameMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
+        const glasses = new THREE.Group();
+        const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.05), frameMat);
+        f1.position.set(-0.16, 2.1, 0.38);
+        glasses.add(f1);
+        const f2 = f1.clone();
+        f2.position.set(0.16, 2.1, 0.38);
+        glasses.add(f2);
+        accGroup.add(glasses);
+      }
+      saveState();
+      renderWardrobeUI();
+    }
+
+    /* =====================================================================
+       6. INPUT CONTROLLER UNIVERSAL (SENTUH LAYAR HP, IFP, MOUSE & KEYBOARD)
+       ===================================================================== */
+    const input = { forward: 0, backward: 0, left: 0, right: 0, jump: false, sprint: false, camLeft: 0, camRight: 0 };
+    let isGamePaused = false;
+
+    let autoWalkTarget = null;
+    const targetMarkerGroup = new THREE.Group();
+    const targetRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.85, 28),
+      new THREE.MeshBasicMaterial({ color: 0x38BDF8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+    );
+    targetRing.rotation.x = -Math.PI / 2;
+    targetRing.position.y = 0.08;
+    targetMarkerGroup.add(targetRing);
+
+    const targetCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.22, 0.15, 16),
+      new THREE.MeshBasicMaterial({ color: 0xFDE047 })
+    );
+    targetCore.position.y = 0.12;
+    targetMarkerGroup.add(targetCore);
+    targetMarkerGroup.visible = false;
+    scene.add(targetMarkerGroup);
+
+    const raycaster = new THREE.Raycaster();
+    const pointerNDC = new THREE.Vector2();
+
+    function cancelAutoWalk() {
+      autoWalkTarget = null;
+      targetMarkerGroup.visible = false;
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('registration-overlay').style.display !== 'none') return;
+      const activeTag = document.activeElement ? document.activeElement.tagName : '';
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+      if (e.code === 'Escape') {
+        if (document.querySelector('.modal-overlay.active')) closeModal();
+        else togglePause();
+        return;
+      }
+      if (document.querySelector('.modal-overlay.active') || isGamePaused) return;
+
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': input.forward = 1; cancelAutoWalk(); break;
+        case 'KeyS': case 'ArrowDown': input.backward = 1; cancelAutoWalk(); break;
+        case 'KeyA': case 'ArrowLeft': input.left = 1; cancelAutoWalk(); break;
+        case 'KeyD': case 'ArrowRight': input.right = 1; cancelAutoWalk(); break;
+        case 'Space':
+          triggerJump();
+          break;
+        case 'ShiftLeft': case 'ShiftRight': input.sprint = true; break;
+        case 'KeyE': triggerCurrentInteraction(); break;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': input.forward = 0; break;
+        case 'KeyS': case 'ArrowDown': input.backward = 0; break;
+        case 'KeyA': case 'ArrowLeft': input.left = 0; break;
+        case 'KeyD': case 'ArrowRight': input.right = 0; break;
+        case 'Space': input.jump = false; break;
+        case 'ShiftLeft': case 'ShiftRight': input.sprint = false; break;
+      }
+    });
+
+    function triggerJump() {
+      if (playerState.isGrounded && !isGamePaused) {
+        playerState.velocityY = playerState.jumpForce;
+        playerState.isGrounded = false;
+        audio.playJump();
+      }
+    }
+
+    let cameraOrbit = { yaw: 0, pitch: 0.38, distance: 15 };
+    let isCanvasDragging = false;
+    let pointerDownPos = { x: 0, y: 0 };
+    let prevPointerPos = { x: 0, y: 0 };
+    let pointerDownTime = 0;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (isGamePaused || document.querySelector('.modal-overlay.active')) return;
+      isCanvasDragging = true;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      prevPointerPos = { x: e.clientX, y: e.clientY };
+      pointerDownTime = performance.now();
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isCanvasDragging || isGamePaused) return;
+      const dx = e.clientX - prevPointerPos.x;
+      const dy = e.clientY - prevPointerPos.y;
+      cameraOrbit.yaw -= dx * 0.0065;
+      cameraOrbit.pitch = Math.max(0.12, Math.min(1.2, cameraOrbit.pitch + dy * 0.0055));
+      prevPointerPos = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (!isCanvasDragging) return;
+      isCanvasDragging = false;
+
+      const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      const elapsed = performance.now() - pointerDownTime;
+      if (moveDist < 14 && elapsed < 450 && e.target === canvas) {
+        handleCanvasTapToMove(e.clientX, e.clientY);
+      }
+    });
+
+    function handleCanvasTapToMove(clientX, clientY) {
+      if (isGamePaused || document.querySelector('.modal-overlay.active')) return;
+      pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+      pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointerNDC, camera);
+
+      const hits = raycaster.intersectObject(groundMesh);
+      if (hits.length > 0) {
+        const pt = hits[0].point;
+        const clampedX = Math.max(-108, Math.min(108, pt.x));
+        const clampedZ = Math.max(-108, Math.min(108, pt.z));
+        autoWalkTarget = new THREE.Vector3(clampedX, 0, clampedZ);
+        targetMarkerGroup.position.set(clampedX, 0, clampedZ);
+        targetMarkerGroup.visible = true;
+      }
+    }
+
+    window.addEventListener('wheel', (e) => {
+      if (isGamePaused) return;
+      cameraOrbit.distance = Math.max(7, Math.min(24, cameraOrbit.distance + e.deltaY * 0.015));
+    }, { passive: true });
+
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickHandle = document.getElementById('joystick-handle');
+    let joyPointerId = null;
+    let joyCenter = { x: 0, y: 0 };
+
+    joystickZone.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isGamePaused) return;
+      cancelAutoWalk();
+      joyPointerId = e.pointerId;
+      joystickZone.setPointerCapture(e.pointerId);
+      const rect = joystickZone.getBoundingClientRect();
+      joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      updateJoystickFromPoint(e.clientX, e.clientY);
+    });
+
+    joystickZone.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== joyPointerId || isGamePaused) return;
+      e.preventDefault();
+      e.stopPropagation();
+      updateJoystickFromPoint(e.clientX, e.clientY);
+    });
+
+    function updateJoystickFromPoint(clientX, clientY) {
+      const maxDist = 44;
+      let dx = clientX - joyCenter.x;
+      let dy = clientY - joyCenter.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+      }
+      joystickHandle.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      const nx = dx / maxDist;
+      const ny = dy / maxDist;
+      input.left = nx < -0.18 ? -nx : 0;
+      input.right = nx > 0.18 ? nx : 0;
+      input.forward = ny < -0.18 ? -ny : 0;
+      input.backward = ny > 0.18 ? ny : 0;
+    }
+
+    function resetJoystick(e) {
+      if (e && e.pointerId !== joyPointerId) return;
+      joyPointerId = null;
+      joystickHandle.style.transform = `translate(-50%, -50%)`;
+      input.forward = 0; input.backward = 0; input.left = 0; input.right = 0;
+    }
+
+    joystickZone.addEventListener('pointerup', resetJoystick);
+    joystickZone.addEventListener('pointercancel', resetJoystick);
+
+    document.querySelectorAll('.dpad-btn').forEach(btn => {
+      const dir = btn.dataset.dir;
+      const startDir = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelAutoWalk();
+        btn.classList.add('pressed');
+        input[dir] = 1;
+      };
+      const endDir = (e) => {
+        e.preventDefault();
+        btn.classList.remove('pressed');
+        input[dir] = 0;
+      };
+      btn.addEventListener('pointerdown', startDir);
+      btn.addEventListener('pointerup', endDir);
+      btn.addEventListener('pointerleave', endDir);
+      btn.addEventListener('pointercancel', endDir);
+    });
+
+    const bindHoldBtn = (elId, propName) => {
+      const el = document.getElementById(elId);
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); input[propName] = 1; });
+      const stopHold = (e) => { e.preventDefault(); input[propName] = 0; };
+      el.addEventListener('pointerup', stopHold);
+      el.addEventListener('pointerleave', stopHold);
+      el.addEventListener('pointercancel', stopHold);
+    };
+    bindHoldBtn('touch-cam-left', 'camLeft');
+    bindHoldBtn('touch-cam-right', 'camRight');
+
+    document.getElementById('touch-jump').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerJump();
+    });
+
+    document.getElementById('touch-interact').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (nearestInteraction) {
+        triggerCurrentInteraction();
+      } else {
+        showToast("Dekati Pos Gedung atau NPC terlebih dahulu untuk berinteraksi!", "💡");
+      }
+    });
+
+    document.getElementById('btn-pause').onclick = togglePause;
+    function togglePause() {
+      isGamePaused = !isGamePaused;
+      showToast(isGamePaused ? "Permainan Dijeda ⏸️" : "Lanjut Berpetualang ▶️", "⏱️");
+      document.getElementById('btn-pause').innerText = isGamePaused ? "▶️" : "⏸️";
+    }
+
+    /* =====================================================================
+       7. UPDATE FISIKA PEMAIN & DETEKSI GULUNGAN MATEMATIKA
+       ===================================================================== */
+    const playerState = {
+      velocityY: 0,
+      gravity: -24,
+      jumpForce: 10.5,
+      isGrounded: true,
+      walkCycle: 0
+    };
+
+    let nearestInteraction = null;
+
+    function updatePlayerParty(delta) {
+      if (isGamePaused) return;
+
+      if (input.camLeft) cameraOrbit.yaw += 1.8 * delta;
+      if (input.camRight) cameraOrbit.yaw -= 1.8 * delta;
+
+      let moveZ = (input.backward - input.forward);
+      let moveX = (input.right - input.left);
+      const moveDir = new THREE.Vector3(moveX, 0, moveZ);
+      let isMoving = moveDir.length() > 0.1;
+
+      if (isMoving) {
+        cancelAutoWalk();
+        moveDir.normalize();
+        moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraOrbit.yaw);
+      } else if (autoWalkTarget) {
+        const toTarget = new THREE.Vector3(
+          autoWalkTarget.x - playerGroup.position.x,
+          0,
+          autoWalkTarget.z - playerGroup.position.z
+        );
+        if (toTarget.length() > 0.65) {
+          toTarget.normalize();
+          moveDir.copy(toTarget);
+          isMoving = true;
+        } else {
+          cancelAutoWalk();
+        }
+      }
+
+      if (isMoving) {
+        const speed = input.sprint ? 14 : 9.5;
+        playerGroup.position.x += moveDir.x * speed * delta;
+        playerGroup.position.z += moveDir.z * speed * delta;
+
+        const targetRot = Math.atan2(moveDir.x, moveDir.z);
+        playerGroup.rotation.y = THREE.MathUtils.lerp(playerGroup.rotation.y, targetRot, 0.22);
+
+        leaderTrail.unshift({
+          pos: playerGroup.position.clone(),
+          rotY: playerGroup.rotation.y
+        });
+        if (leaderTrail.length > 80) leaderTrail.pop();
+
+        playerState.walkCycle += delta * (input.sprint ? 18 : 13);
+      }
+
+      playerState.velocityY += playerState.gravity * delta;
+      playerGroup.position.y += playerState.velocityY * delta;
+      if (playerGroup.position.y <= 0) {
+        playerGroup.position.y = 0;
+        playerState.velocityY = 0;
+        playerState.isGrounded = true;
+      }
+
+      playerGroup.position.x = Math.max(-110, Math.min(110, playerGroup.position.x));
+      playerGroup.position.z = Math.max(-110, Math.min(110, playerGroup.position.z));
+
+      const myRig = partyRigs[0];
+      if (isMoving) {
+        const legSwing = Math.sin(playerState.walkCycle) * 0.45;
+        const armSwing = Math.cos(playerState.walkCycle) * 0.5;
+        myRig.leftLeg.rotation.x = legSwing;
+        myRig.rightLeg.rotation.x = -legSwing;
+        myRig.leftArm.rotation.x = -armSwing;
+        myRig.rightArm.rotation.x = armSwing;
+      } else {
+        myRig.leftLeg.rotation.x = THREE.MathUtils.lerp(myRig.leftLeg.rotation.x, 0, 0.15);
+        myRig.rightLeg.rotation.x = THREE.MathUtils.lerp(myRig.rightLeg.rotation.x, 0, 0.15);
+        myRig.leftArm.rotation.x = THREE.MathUtils.lerp(myRig.leftArm.rotation.x, 0, 0.15);
+        myRig.rightArm.rotation.x = THREE.MathUtils.lerp(myRig.rightArm.rotation.x, 0, 0.15);
+      }
+      myRig.npMesh.quaternion.copy(camera.quaternion);
+
+      Object.keys(remotePlayerRigs).forEach(uid => {
+        const rRig = remotePlayerRigs[uid];
+        const distMove = rRig.group.position.distanceTo(rRig.targetPos);
+        rRig.group.position.lerp(rRig.targetPos, 0.18);
+        rRig.group.rotation.y = THREE.MathUtils.lerp(rRig.group.rotation.y, rRig.targetRotY, 0.2);
+
+        if (distMove > 0.05) {
+          rRig.walkPhase += delta * 13;
+          rRig.leftLeg.rotation.x = Math.sin(rRig.walkPhase) * 0.45;
+          rRig.rightLeg.rotation.x = -Math.sin(rRig.walkPhase) * 0.45;
+          rRig.leftArm.rotation.x = -Math.cos(rRig.walkPhase) * 0.5;
+          rRig.rightArm.rotation.x = Math.cos(rRig.walkPhase) * 0.5;
+        } else {
+          rRig.leftLeg.rotation.x = THREE.MathUtils.lerp(rRig.leftLeg.rotation.x, 0, 0.15);
+          rRig.rightLeg.rotation.x = THREE.MathUtils.lerp(rRig.rightLeg.rotation.x, 0, 0.15);
+          rRig.leftArm.rotation.x = THREE.MathUtils.lerp(rRig.leftArm.rotation.x, 0, 0.15);
+          rRig.rightArm.rotation.x = THREE.MathUtils.lerp(rRig.rightArm.rotation.x, 0, 0.15);
+        }
+        rRig.npMesh.quaternion.copy(camera.quaternion);
+      });
+    }
+
+    function updateCamera() {
+      const camTargetX = playerGroup.position.x + Math.sin(cameraOrbit.yaw) * Math.cos(cameraOrbit.pitch) * cameraOrbit.distance;
+      const camTargetY = playerGroup.position.y + Math.sin(cameraOrbit.pitch) * cameraOrbit.distance + 2.2;
+      const camTargetZ = playerGroup.position.z + Math.cos(cameraOrbit.yaw) * Math.cos(cameraOrbit.pitch) * cameraOrbit.distance;
+
+      camera.position.lerp(new THREE.Vector3(camTargetX, camTargetY, camTargetZ), 0.12);
+      camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.8, playerGroup.position.z);
+    }
+
+    function checkProximity() {
+      if (isGamePaused || document.querySelector('.modal-overlay.active')) return;
+      const pPos = playerGroup.position;
+
+      for (let i = animatedCollectibles.length - 1; i >= 0; i--) {
+        const item = animatedCollectibles[i];
+        const dist = pPos.distanceTo(item.mesh.position);
+        if (dist < 2.2) {
+          scene.remove(item.mesh);
+          animatedCollectibles.splice(i, 1);
+
+          if (item.type === 'coin') {
+            audio.playCoin();
+            const curPlayer = gameState.players[gameState.activeTurnIndex];
+            awardPlayerPoints(gameState.activeTurnIndex, 5);
+            updatePartyFloatingLabels();
+            showToast(`🪙 Koin Emas! +5 Poin untuk ${curPlayer.name}!`);
+          } else if (item.type === 'scroll') {
+            audio.playLevelUp();
+            gameState.scrollsFound++;
+            saveState();
+            openScrollChallengeModal(item.challengeIdx);
+          }
+        }
+      }
+
+      nearestInteraction = null;
+      let minDist = Infinity;
+
+      interactiveZones.forEach(zone => {
+        const dist = pPos.distanceTo(zone.pos);
+        if (dist < zone.radius && dist < minDist) {
+          minDist = dist;
+          nearestInteraction = zone;
+        }
+      });
+
+      const prompt = document.getElementById('interact-prompt');
+      const promptText = document.getElementById('interact-text');
+
+      if (nearestInteraction) {
+        prompt.classList.add('show');
+        if (nearestInteraction.type === 'building') {
+          promptText.innerText = `Masuk ${nearestInteraction.name}`;
+        } else if (nearestInteraction.type === 'npc') {
+          promptText.innerText = `Bicara dengan ${nearestInteraction.name}`;
+        }
+      } else {
+        prompt.classList.remove('show');
+      }
+    }
+
+    function triggerCurrentInteraction() {
+      if (!nearestInteraction) return;
+      if (nearestInteraction.type === 'building') {
+        openBuildingModal(nearestInteraction.key);
+      } else if (nearestInteraction.type === 'npc') {
+        audio.playCoin();
+        showToast(`${nearestInteraction.name}: "${nearestInteraction.dialogue}"`, "💬");
+      }
+    }
+
+    /* =====================================================================
+       8. SISTEM MODAL POS KUIS, TOMBOL PELAJARI & GULUNGAN MATEMATIKA
+       ===================================================================== */
+    let currentBuildingKey = null;
+    let quizSession = {
+      questions: [],
+      currentIndex: 0,
+      timer: 45,
+      timerInterval: null
+    };
+
+    function toggleQuizStudyCard() {
+      const card = document.getElementById('quiz-study-card');
+      const isShowing = card.style.display === 'block';
+      card.style.display = isShowing ? 'none' : 'block';
+      if (!isShowing) {
+        audio.playCoin();
+      }
+    }
+
+    function toggleScrollStudyCard() {
+      const card = document.getElementById('scroll-study-card');
+      const isShowing = card.style.display === 'block';
+      card.style.display = isShowing ? 'none' : 'block';
+      if (!isShowing) {
+        audio.playCoin();
+      }
+    }
+
+    function openScrollChallengeModal(challengeIdx) {
+      const ch = worldScrollChallenges[challengeIdx % worldScrollChallenges.length];
+      document.getElementById('scroll-player-name').innerText = `${gameState.myName} (LVL ${gameState.myLevel})`;
+      document.getElementById('scroll-question').innerText = ch.q;
+      document.getElementById('scroll-study-text').innerText = ch.studyExample || "Perhatikan tanda operasi hitung dan pecah angka menjadi puluhan serta satuan untuk mempermudah perhitungan.";
+      document.getElementById('scroll-study-card').style.display = 'none';
+      document.getElementById('scroll-explanation').style.display = 'none';
+      document.getElementById('scroll-done-btn').style.display = 'none';
+
+      const optBox = document.getElementById('scroll-options');
+      optBox.innerHTML = '';
+
+      ch.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.innerHTML = `<span style="font-weight:900; color:#818cf8;">${String.fromCharCode(65 + idx)}.</span> ${opt}`;
+        btn.onclick = () => {
+          const allBtns = optBox.querySelectorAll('.answer-btn');
+          allBtns.forEach(b => b.disabled = true);
+
+          if (idx === ch.answer) {
+            audio.playCorrect();
+            btn.classList.add('correct');
+            awardPlayerPoints(0, 30);
+            showToast(`🎉 Benar! ${gameState.myName} meraih +30 Poin!`, "🌟");
+          } else {
+            audio.playWrong();
+            btn.classList.add('wrong');
+            if (allBtns[ch.answer]) allBtns[ch.answer].classList.add('correct');
+            showToast(`Kurang tepat! Mari pelajari pembahasannya.`, "💡");
+          }
+
+          document.getElementById('scroll-explanation-text').innerText = ch.explain;
+          document.getElementById('scroll-explanation').style.display = 'block';
+          document.getElementById('scroll-done-btn').style.display = 'block';
+        };
+        optBox.appendChild(btn);
+      });
+
+      document.getElementById('modal-scroll').classList.add('active');
+    }
+
+    function openBuildingModal(key) {
+      currentBuildingKey = key;
+      const curData = gameState.curriculum[key];
+      if (!curData) return;
+
+      document.getElementById('building-modal-icon').innerText = curData.icon || "🏛️";
+      document.getElementById('building-modal-title').innerText = curData.title;
+      document.getElementById('materi-text').innerText = curData.materi;
+
+      switchBuildingTab('materi');
+      document.getElementById('modal-building').classList.add('active');
+    }
+
+    function switchBuildingTab(tab) {
+      const isMateri = tab === 'materi';
+      document.getElementById('tab-btn-materi').classList.toggle('active', isMateri);
+      document.getElementById('tab-btn-kuis').classList.toggle('active', !isMateri);
+      document.getElementById('tab-content-materi').style.display = isMateri ? 'block' : 'none';
+      document.getElementById('tab-content-kuis').style.display = !isMateri ? 'block' : 'none';
+      if (isMateri && quizSession.timerInterval) clearInterval(quizSession.timerInterval);
+    }
+
+    function startBuildingQuiz() {
+      switchBuildingTab('kuis');
+      const curData = gameState.curriculum[currentBuildingKey];
+      quizSession.questions = [...curData.quizzes];
+      quizSession.currentIndex = 0;
+
+      document.getElementById('quiz-summary').style.display = 'none';
+      document.getElementById('quiz-question').style.display = 'block';
+      document.getElementById('quiz-study-bar').style.display = 'flex';
+      document.getElementById('quiz-options').style.display = 'flex';
+      document.querySelector('.quiz-stats').style.display = 'flex';
+      document.getElementById('quiz-turn-indicator').style.display = 'flex';
+
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const qData = quizSession.questions[quizSession.currentIndex];
+      document.getElementById('quiz-current-player-name').innerText = `${gameState.myName} (LVL ${gameState.myLevel})`;
+      document.getElementById('quiz-question-counter').innerText = `Soal ${quizSession.currentIndex + 1} / ${quizSession.questions.length}`;
+      document.getElementById('quiz-question').innerText = `${quizSession.currentIndex + 1}. ${qData.q}`;
+      document.getElementById('quiz-study-text').innerText = qData.studyExample || "Pecah bilangan menjadi puluhan dan satuan agar lebih mudah dihitung langkah demi langkah.";
+      document.getElementById('quiz-study-card').style.display = 'none';
+      document.getElementById('quiz-explanation').style.display = 'none';
+      document.getElementById('quiz-next-btn').style.display = 'none';
+
+      const optionsBox = document.getElementById('quiz-options');
+      optionsBox.innerHTML = '';
+
+      qData.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.innerHTML = `<span style="font-weight:900; color:#818cf8;">${String.fromCharCode(65 + idx)}.</span> ${opt}`;
+        btn.onclick = () => selectAnswer(idx);
+        optionsBox.appendChild(btn);
+      });
+
+      clearInterval(quizSession.timerInterval);
+      quizSession.timer = 45;
+      const timerEl = document.getElementById('quiz-timer');
+      timerEl.classList.remove('warning');
+      timerEl.innerText = `⏱️ ${quizSession.timer}s`;
+
+      quizSession.timerInterval = setInterval(() => {
+        quizSession.timer--;
+        timerEl.innerText = `⏱️ ${quizSession.timer}s`;
+        if (quizSession.timer <= 8) timerEl.classList.add('warning');
+        if (quizSession.timer <= 0) {
+          clearInterval(quizSession.timerInterval);
+          selectAnswer(-1);
+        }
+      }, 1000);
+    }
+
+    function selectAnswer(chosenIdx) {
+      clearInterval(quizSession.timerInterval);
+      const qData = quizSession.questions[quizSession.currentIndex];
+      const buttons = document.querySelectorAll('#quiz-options .answer-btn');
+      buttons.forEach(btn => btn.disabled = true);
+
+      const isCorrect = chosenIdx === qData.answer;
+
+      if (isCorrect) {
+        audio.playCorrect();
+        if (buttons[chosenIdx]) buttons[chosenIdx].classList.add('correct');
+        awardPlayerPoints(0, 25);
+        showToast(`Benar! +25 Poin untuk ${gameState.myName}!`, "✨");
+      } else {
+        audio.playWrong();
+        if (chosenIdx >= 0 && buttons[chosenIdx]) buttons[chosenIdx].classList.add('wrong');
+        if (buttons[qData.answer]) buttons[qData.answer].classList.add('correct');
+        showToast(`Jawaban kurang tepat. Pelajari pembahasannya ya!`, "💡");
+      }
+
+      document.getElementById('quiz-explanation-text').innerText = qData.explain;
+      document.getElementById('quiz-explanation').style.display = 'block';
+
+      const nextBtn = document.getElementById('quiz-next-btn');
+      nextBtn.style.display = 'block';
+      if (quizSession.currentIndex >= quizSession.questions.length - 1) {
+        nextBtn.innerText = "Selesaikan Pos & Lihat Skor ➔";
+      } else {
+        nextBtn.innerText = "Soal Berikutnya ➔";
+      }
+    }
+
+    /* =====================================================================
+       9. LEADERBOARD PODIUM JUARA, VOICE WALKIE-TALKIE & SERTIFIKAT (PNG/PDF)
+       ===================================================================== */
+    function getAllRoomPlayersSorted() {
+      const list = Object.values(onlinePlayersMap);
+      const foundMe = list.find(p => p.uid === gameState.myId);
+      if (!foundMe) {
+        list.push({
+          uid: gameState.myId,
+          name: gameState.myName,
+          score: gameState.myScore,
+          level: gameState.myLevel,
+          color: gameState.myColor
+        });
+      } else {
+        foundMe.name = gameState.myName;
+        foundMe.score = gameState.myScore;
+        foundMe.level = gameState.myLevel;
+        foundMe.color = gameState.myColor;
+      }
+      return list.sort((a, b) => (b.score || 0) - (a.score || 0));
+    }
+
+    document.getElementById('btn-leaderboard').onclick = openLeaderboardModal;
+
+    function openLeaderboardModal() {
+      renderLeaderboardUI();
+      document.getElementById('modal-leaderboard').classList.add('active');
+    }
+
+    function renderLeaderboardUI() {
+      const sorted = getAllRoomPlayersSorted();
+      const champ = sorted[0] || { name: gameState.myName, score: gameState.myScore, level: gameState.myLevel, color: gameState.myColor };
+
+      document.getElementById('champion-name').innerText = `🏆 ${champ.name} (LVL ${champ.level || 1} • ${champ.score || 0} Poin)`;
+
+      const podiumOrder = [sorted[1], sorted[0], sorted[2], sorted[3]];
+      const heights = ["105px", "145px", "80px", "60px"];
+      const medals = ["🥈", "🥇", "🥉", "🎖️"];
+
+      const podiumBox = document.getElementById('podium-box');
+      podiumBox.innerHTML = '';
+
+      podiumOrder.forEach((p, idx) => {
+        if (!p) return;
+        const col = document.createElement('div');
+        col.className = 'podium-col';
+        col.innerHTML = `
+          <div class="podium-name">${p.name}</div>
+          <div class="podium-score">LVL ${p.level || 1} • ${p.score || 0} Pts</div>
+          <div class="podium-bar" style="height:${heights[idx]}; background:${p.color || '#4F46E5'};">
+            ${medals[idx]}
+          </div>
+        `;
+        podiumBox.appendChild(col);
+      });
+
+      const listContainer = document.getElementById('leaderboard-list');
+      listContainer.innerHTML = '';
+      sorted.forEach((p, rankIdx) => {
+        const isMe = p.uid === gameState.myId;
+        const row = document.createElement('div');
+        row.className = 'rank-list-item';
+        if (isMe) row.style.borderColor = '#38BDF8';
+        row.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:18px; font-weight:900; color:#FBBF24;">#${rankIdx + 1}</span>
+            <span class="color-dot" style="background:${p.color || '#EF4444'};"></span>
+            <strong style="font-size:15px;">${p.name} ${isMe ? '(Kamu)' : ''}</strong>
+            <span style="background:rgba(255,255,255,0.1); font-size:11px; font-weight:800; padding:2px 8px; border-radius:8px;">⭐ LVL ${p.level || 1}</span>
+            ${rankIdx === 0 ? '<span style="background:#F59E0B; color:#78350F; font-size:10px; font-weight:900; padding:2px 8px; border-radius:10px;">👑 JUARA 1 (BISA KLAIM SERTIFIKAT TERCEPAT)</span>' : ''}
+          </div>
+          <div style="font-size:16px; font-weight:900; color:#34D399;">${p.score || 0} Poin</div>
+        `;
+        listContainer.appendChild(row);
+      });
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-room-code').innerText = gameState.playMode === 'personal' ? 'PERSONAL (SOLO)' : gameState.roomCode;
+      document.getElementById('hud-my-stats').innerText = `⭐ LVL ${gameState.myLevel} • 🏆 ${gameState.myScore} Poin`;
+      document.getElementById('hud-scrolls').innerText = `${gameState.scrollsFound} / ${gameState.totalScrolls}`;
+
+      const sorted = getAllRoomPlayersSorted();
+      if (gameState.playMode === 'personal') {
+        document.getElementById('hud-online-count').innerText = `👤 Mode Solo`;
+      } else {
+        document.getElementById('hud-online-count').innerText = `🟢 ${sorted.length} Online`;
+      }
+
+      const grid = document.getElementById('hud-party-grid');
+      grid.innerHTML = '';
+      sorted.slice(0, 8).forEach((p, idx) => {
+        const isMe = p.uid === gameState.myId;
+        const card = document.createElement('div');
+        card.className = `party-member-card ${idx === 0 ? 'active-turn' : ''}`;
+        card.title = isMe ? "Ini adalah karaktermu" : `Klik untuk menghampiri ${p.name}`;
+        card.innerHTML = `
+          <div class="member-left">
+            <span class="member-avatar-dot" style="background:${p.color || '#EF4444'}"></span>
+            <span class="member-name">${idx === 0 && (p.score || 0) > 0 ? '👑 ' : ''}${p.name}${isMe ? ' (Kamu)' : ''}</span>
+          </div>
+          <span class="member-score">⭐L${p.level || 1} • ${p.score || 0}</span>
+        `;
+        card.onclick = () => {
+          if (!isMe && remotePlayerRigs[p.uid]) {
+            const tPos = remotePlayerRigs[p.uid].group.position;
+            playerGroup.position.set(tPos.x + 1.8, 0, tPos.z + 1.8);
+            showToast(`⚡ Menghampiri posisi ${p.name} (LVL ${p.level || 1} • ${p.score || 0} Poin)!`, "🧭");
+            if (window.pushMyStateToCloud) window.pushMyStateToCloud(true);
+          } else if (isMe) {
+            openLeaderboardModal();
+          }
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    /* =====================================================================
+       9B. FITUR KOMUNIKASI SUARA (WALKIE-TALKIE) & LIVE CHAT TANPA RESET GAME
+       ===================================================================== */
+    const voiceBtn = document.getElementById('touch-voice-ptt');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListeningVoice = false;
+
+    if (SpeechRecognition) {
+      try {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'id-ID';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          isListeningVoice = true;
+          voiceBtn.classList.add('recording');
+          document.getElementById('voice-btn-label').innerText = "AKTIF";
+          showToast("🎙️ Mikrofon Aktif! Silakan berbicara, permainan tetap berjalan...", "🗣️");
+        };
+
+        recognition.onresult = (event) => {
+          if (event.results && event.results[0] && event.results[0][0]) {
+            const transcript = event.results[0][0].transcript;
+            if (transcript && transcript.trim()) {
+              broadcastVoiceMessage(transcript.trim());
+            }
+          }
+        };
+
+        recognition.onerror = (ev) => {
+          isListeningVoice = false;
+          voiceBtn.classList.remove('recording');
+          document.getElementById('voice-btn-label').innerText = "BICARA";
+          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+            showToast("Izin mikrofon dibatasi browser. Gunakan kolom Live Chat di kanan layar untuk berbicara!", "💬");
+            focusChatInputBox();
+          } else {
+            showToast("Suara belum terdengar jelas. Kamu juga bisa mengetik di Live Chat!", "🎙️");
+          }
+        };
+
+        recognition.onend = () => {
+          isListeningVoice = false;
+          voiceBtn.classList.remove('recording');
+          document.getElementById('voice-btn-label').innerText = "BICARA";
+        };
+      } catch (e) {
+        recognition = null;
+      }
+    }
+
+    function focusChatInputBox() {
+      const chatWidget = document.getElementById('chat-widget');
+      chatWidget.classList.remove('minimized');
+      document.getElementById('chat-toggle-icon').innerText = '▼';
+      const inputEl = document.getElementById('chat-input-text');
+      if (inputEl) inputEl.focus();
+    }
+
+    voiceBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (recognition) {
+        if (isListeningVoice) {
+          try { recognition.stop(); } catch (err) {}
+        } else {
+          try {
+            recognition.start();
+          } catch (err) {
+            showToast("Silakan ketik pesan suaramu di kolom Live Chat!", "💬");
+            focusChatInputBox();
+          }
+        }
+      } else {
+        showToast("Browser ini menggunakan mode Chat Suara. Ketik pesanmu di kolom Live Chat!", "💬");
+        focusChatInputBox();
+      }
+    });
+
+    function toggleChatWidget() {
+      const w = document.getElementById('chat-widget');
+      const isMin = w.classList.toggle('minimized');
+      document.getElementById('chat-toggle-icon').innerText = isMin ? '▲' : '▼';
+    }
+
+    function appendChatLog(senderName, senderColor, messageText, isVoice = false) {
+      const box = document.getElementById('chat-messages-box');
+      if (!box) return;
+      const item = document.createElement('div');
+      item.className = 'chat-msg-item';
+      item.style.borderLeftColor = senderColor || '#38BDF8';
+      item.innerHTML = `
+        <span class="chat-msg-sender" style="color:${senderColor || '#FBBF24'};">${isVoice ? '🎙️ ' : ''}${senderName}:</span>
+        <span>${messageText}</span>
+      `;
+      box.appendChild(item);
+      while (box.children.length > 40) {
+        box.removeChild(box.firstChild);
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendChatMessage() {
+      const inputEl = document.getElementById('chat-input-text');
+      if (!inputEl) return;
+      const msg = inputEl.value.trim();
+      if (!msg) return;
+      inputEl.value = '';
+
+      const now = Date.now();
+      gameState.chatText = msg;
+      gameState.chatTimestamp = now;
+      gameState.speechText = msg;
+      gameState.speechTimestamp = now;
+
+      appendChatLog(gameState.myName, gameState.myColor, msg, false);
+      updatePartyFloatingLabels();
+
+      if (window.pushMyStateToCloud) {
+        window.pushMyStateToCloud(true);
+      }
+      setTimeout(() => {
+        updatePartyFloatingLabels();
+      }, 6100);
+    }
+
+    function broadcastVoiceMessage(textMsg) {
+      const now = Date.now();
+      gameState.speechText = textMsg;
+      gameState.speechTimestamp = now;
+      gameState.chatText = textMsg;
+      gameState.chatTimestamp = now;
+
+      appendChatLog(gameState.myName, gameState.myColor, textMsg, true);
+      updatePartyFloatingLabels();
+      playIncomingVoice(gameState.myName, textMsg, true);
+
+      if (window.pushMyStateToCloud) {
+        window.pushMyStateToCloud(true);
+      }
+      setTimeout(() => {
+        updatePartyFloatingLabels();
+      }, 6100);
+    }
+
+    function playIncomingVoice(speakerName, textMsg, isSelf = false) {
+      const banner = document.getElementById('voice-feed-banner');
+      document.getElementById('voice-feed-text').innerText = `${speakerName}: "${textMsg}"`;
+      banner.classList.add('active');
+      setTimeout(() => banner.classList.remove('active'), 5200);
+
+      if ('speechSynthesis' in window && !isSelf) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(`${speakerName} berkata: ${textMsg}`);
+        utter.lang = 'id-ID';
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    /* =====================================================================
+       9C. GENERATOR SERTIFIKAT JUARA MATEMATIKA (DOWNLOAD PNG & PDF)
+       ===================================================================== */
+    function openCertificateModal() {
+      renderCertificateCanvas();
+      document.getElementById('modal-certificate').classList.add('active');
+    }
+
+    function renderCertificateCanvas() {
+      const sorted = getAllRoomPlayersSorted();
+      const myRankIdx = sorted.findIndex(p => p.uid === gameState.myId);
+      const myRank = myRankIdx >= 0 ? myRankIdx + 1 : 1;
+      const topScore = sorted[0] ? sorted[0].score : gameState.myScore;
+      const isChampion = (gameState.myScore >= topScore && gameState.myScore > 0) || myRank === 1;
+
+      const banner = document.getElementById('cert-eligibility-banner');
+      const btnPng = document.getElementById('btn-download-png');
+      const btnPdf = document.getElementById('btn-download-pdf');
+
+      if (isChampion && gameState.myScore > 0) {
+        banner.style.background = "rgba(16, 185, 129, 0.25)";
+        banner.style.border = "2px solid #10B981";
+        banner.style.color = "#A7F3D0";
+        banner.innerHTML = `👑 SELAMAT! Kamu adalah <strong>PERAIH SKOR TERTINGGI (#1)</strong> dengan <strong>${gameState.myScore} Poin (Level ${gameState.myLevel})</strong>! Kamu berhak mengklaim & mengunduh Sertifikat Juara Pertama sekarang!`;
+        btnPng.disabled = false;
+        btnPdf.disabled = false;
+        btnPng.style.opacity = "1";
+        btnPdf.style.opacity = "1";
+      } else if (gameState.myScore > 0) {
+        banner.style.background = "rgba(245, 158, 11, 0.2)";
+        banner.style.border = "2px solid #F59E0B";
+        banner.style.color = "#FDE68A";
+        banner.innerHTML = `🏅 Saat ini kamu berada di <strong>Peringkat #${myRank}</strong> (${gameState.myScore} Poin). Pemimpin skor tertinggi adalah <strong>${sorted[0].name} (${sorted[0].score} Poin)</strong>. Kamu tetap dapat mengunduh Sertifikat Pencapaianmu atau kejar poin tertinggi untuk Sertifikat Juara 1!`;
+        btnPng.disabled = false;
+        btnPdf.disabled = false;
+      } else {
+        banner.style.background = "rgba(239, 68, 68, 0.2)";
+        banner.style.border = "2px solid #EF4444";
+        banner.style.color = "#FECDD3";
+        banner.innerHTML = `⚡ Kumpulkan poin terlebih dahulu dengan menjawab soal Matematika agar nilaimu tercatat di Sertifikat!`;
+      }
+
+      const certCanvas = document.getElementById('certificate-canvas');
+      const ctx = certCanvas.getContext('2d');
+      const w = certCanvas.width;
+      const h = certCanvas.height;
+
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#0F172A');
+      grad.addColorStop(0.5, '#1E1B4B');
+      grad.addColorStop(1, '#0F172A');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(28, 28, w - 56, h - 56);
+
+      ctx.strokeStyle = '#FDE68A';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(46, 46, w - 92, h - 92);
+
+      ctx.fillStyle = '#F59E0B';
+      [[46, 46], [w - 76, 46], [46, h - 76], [w - 76, h - 76]].forEach(([cx, cy]) => {
+        ctx.fillRect(cx, cy, 30, 30);
+      });
+
+      ctx.fillStyle = '#FBBF24';
+      ctx.font = '900 42px Nunito, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CERTIFICATE OF ACHIEVEMENT', w / 2, 125);
+
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '700 20px Nunito, sans-serif';
+      ctx.fillText('ROBLOX CERDAS 3D: MATHEMATICS ADVENTURE (+, -, ×, ÷)', w / 2, 162);
+
+      ctx.fillStyle = '#E2E8F0';
+      ctx.font = '600 22px Nunito, sans-serif';
+      ctx.fillText('Sertifikat Penghargaan Ini Diberikan Kepada:', w / 2, 230);
+
+      ctx.fillStyle = '#38BDF8';
+      ctx.font = '900 54px Nunito, sans-serif';
+      ctx.fillText(gameState.myName.toUpperCase(), w / 2, 305);
+
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 260, 325);
+      ctx.lineTo(w / 2 + 260, 325);
+      ctx.stroke();
+
+      const rankTitle = myRank === 1 ? "🏆 THE 1st CHAMPION OF MATHEMATICS (JUARA TERBAIK 1)" : `🏅 PERINGKAT #${myRank} PETUALANG MATEMATIKA TERBAIK`;
+      ctx.fillStyle = '#FDE047';
+      ctx.font = '900 26px Nunito, sans-serif';
+      ctx.fillText(rankTitle, w / 2, 385);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '800 24px Nunito, sans-serif';
+      ctx.fillText(`Total Skor: ${gameState.myScore} Poin   •   Level Tercapai: LEVEL ${gameState.myLevel}   •   Kode Kelas: ${gameState.roomCode}`, w / 2, 435);
+
+      ctx.fillStyle = '#CBD5E1';
+      ctx.font = '600 18px Nunito, sans-serif';
+      ctx.fillText('Telah berhasil menguasai materi Operasi Hitung Penjumlahan, Pengurangan, Perkalian,', w / 2, 485);
+      ctx.fillText('dan Pembagian Matematika dalam petualangan interaktif 3D.', w / 2, 512);
+
+      const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '700 18px Nunito, sans-serif';
+      ctx.fillText(`Diterbitkan pada: ${dateStr}`, 230, 600);
+
+      ctx.fillStyle = '#FBBF24';
+      ctx.font = '900 20px Nunito, sans-serif';
+      ctx.fillText('Mingga Ria Hadi', w - 230, 595);
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '700 15px Nunito, sans-serif';
+      ctx.fillText('Pengembang & Instruktur Edukasi', w - 230, 620);
+    }
+
+    function downloadCertificatePNG() {
+      renderCertificateCanvas();
+      const certCanvas = document.getElementById('certificate-canvas');
+      const link = document.createElement('a');
+      const safeName = gameState.myName.replace(/[^a-z0-9]/gi, '_');
+      link.download = `Sertifikat_Matematika_${safeName}.png`;
+      link.href = certCanvas.toDataURL('image/png');
+      link.click();
+      audio.playLevelUp();
+      showToast("🖼️ Sertifikat PNG berhasil diunduh ke perangkatmu!", "🎉");
+    }
+
+    function downloadCertificatePDF() {
+      renderCertificateCanvas();
+      const certCanvas = document.getElementById('certificate-canvas');
+      const imgData = certCanvas.toDataURL('image/png');
+      const safeName = gameState.myName.replace(/[^a-z0-9]/gi, '_');
+
+      if (window.jspdf && window.jspdf.jsPDF) {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'px',
+          format: [1000, 700]
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, 1000, 700);
+        pdf.save(`Sertifikat_Matematika_${safeName}.pdf`);
+        audio.playLevelUp();
+        showToast("📄 Sertifikat PDF berhasil diunduh ke perangkatmu!", "🎓");
+      } else {
+        downloadCertificatePNG();
+      }
+    }
+
+    function nextQuestion() {
+      if (quizSession.currentIndex >= quizSession.questions.length - 1) {
+        finishQuiz();
+      } else {
+        quizSession.currentIndex++;
+        loadQuestion();
+      }
+    }
+
+    function finishQuiz() {
+      clearInterval(quizSession.timerInterval);
+      document.getElementById('quiz-question').style.display = 'none';
+      document.getElementById('quiz-study-bar').style.display = 'none';
+      document.getElementById('quiz-study-card').style.display = 'none';
+      document.getElementById('quiz-options').style.display = 'none';
+      document.getElementById('quiz-explanation').style.display = 'none';
+      document.getElementById('quiz-next-btn').style.display = 'none';
+      document.querySelector('.quiz-stats').style.display = 'none';
+      document.getElementById('quiz-turn-indicator').style.display = 'none';
+
+      document.getElementById('quiz-summary').style.display = 'block';
+      audio.playLevelUp();
+    }
+
+    // Wardrobe & Mode Guru
+    document.getElementById('btn-wardrobe').onclick = () => {
+      renderWardrobeUI();
+      document.getElementById('modal-wardrobe').classList.add('active');
+    };
+
+    function renderWardrobeUI() {
+      const container = document.getElementById('outfit-options');
+      container.innerHTML = '';
+      Object.keys(outfitPresets).forEach(key => {
+        const item = outfitPresets[key];
+        const card = document.createElement('div');
+        card.className = `wardrobe-item ${gameState.uniform === key ? 'active' : ''}`;
+        card.innerHTML = `
+          <div class="wardrobe-preview" style="background: #${item.shirt.toString(16).padStart(6, '0')}">${item.icon}</div>
+          <div class="wardrobe-label">${item.name}</div>
+        `;
+        card.onclick = () => applyOutfit(key);
+        container.appendChild(card);
+      });
+
+      const accContainer = document.getElementById('accessory-options');
+      accContainer.innerHTML = '';
+      [
+        { id: "none", name: "Tanpa Aksesoris", icon: "👤" },
+        { id: "cap", name: "Topi Petualang", icon: "🧢" },
+        { id: "glasses", name: "Kacamata Detektif", icon: "👓" }
+      ].forEach(a => {
+        const aCard = document.createElement('div');
+        aCard.className = `wardrobe-item ${gameState.accessory === a.id ? 'active' : ''}`;
+        aCard.innerHTML = `
+          <div class="wardrobe-preview" style="background: #334155">${a.icon}</div>
+          <div class="wardrobe-label">${a.name}</div>
+        `;
+        aCard.onclick = () => applyAccessory(a.id);
+        accContainer.appendChild(aCard);
+      });
+    }
+
+    document.getElementById('btn-teacher').onclick = () => {
+      document.getElementById('modal-teacher').classList.add('active');
+    };
+
+    function saveCustomQuestion() {
+      const mapel = document.getElementById('teacher-mapel').value;
+      const question = document.getElementById('teacher-q').value.trim();
+      const studyEx = document.getElementById('teacher-study').value.trim();
+      const opt0 = document.getElementById('teacher-opt0').value.trim();
+      const opt1 = document.getElementById('teacher-opt1').value.trim();
+      const opt2 = document.getElementById('teacher-opt2').value.trim();
+      const opt3 = document.getElementById('teacher-opt3').value.trim();
+      const correct = parseInt(document.getElementById('teacher-correct').value);
+      const explain = document.getElementById('teacher-explain').value.trim();
+
+      if (!question || !opt0 || !opt1 || !opt2 || !opt3 || !explain) {
+        showToast("Mohon lengkapi seluruh kolom soal Matematika!", "⚠️");
+        return;
+      }
+
+      gameState.curriculum[mapel].quizzes.push({
+        q: question,
+        studyExample: studyEx || "🎯 Contoh Serupa: Pecah angka menjadi puluhan dan satuan agar lebih mudah dihitung langkah demi langkah!",
+        options: [opt0, opt1, opt2, opt3],
+        answer: correct,
+        explain: explain
+      });
+      saveState();
+      audio.playCorrect();
+      showToast("Soal Matematika beserta Contoh Pelajari berhasil ditambahkan!", "📚");
+      closeModal('modal-teacher');
+    }
+
+    function closeModal(modalId) {
+      if (modalId) {
+        document.getElementById(modalId).classList.remove('active');
+      } else {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+      }
+      if (quizSession.timerInterval) clearInterval(quizSession.timerInterval);
+    }
+
+    /* =====================================================================
+       10. MINIMAP RADAR & MAIN ANIMATION LOOP
+       ===================================================================== */
+    const radarCanvas = document.getElementById('radar-canvas');
+    const rCtx = radarCanvas.getContext('2d');
+
+    function updateMinimap() {
+      const w = radarCanvas.width, h = radarCanvas.height;
+      const cx = w / 2, cy = h / 2, mapScale = 0.44;
+      rCtx.clearRect(0, 0, w, h);
+
+      rCtx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      rCtx.beginPath(); rCtx.arc(cx, cy, cx - 2, 0, Math.PI * 2); rCtx.fill();
+
+      animatedCollectibles.forEach(item => {
+        if (item.type === 'scroll') {
+          const sx = cx + (item.mesh.position.x - playerGroup.position.x) * mapScale;
+          const sz = cy + (item.mesh.position.z - playerGroup.position.z) * mapScale;
+          if (Math.hypot(sx - cx, sz - cy) < cx - 6) {
+            rCtx.fillStyle = '#FACC15';
+            rCtx.beginPath(); rCtx.arc(sx, sz, 3, 0, Math.PI * 2); rCtx.fill();
+          }
+        }
+      });
+
+      buildingData.forEach(b => {
+        const bx = cx + (b.pos[0] - playerGroup.position.x) * mapScale;
+        const bz = cy + (b.pos[2] - playerGroup.position.z) * mapScale;
+        if (Math.hypot(bx - cx, bz - cy) < cx - 6) {
+          rCtx.fillStyle = b.hex;
+          rCtx.beginPath(); rCtx.arc(bx, bz, 5, 0, Math.PI * 2); rCtx.fill();
+        }
+      });
+
+      Object.keys(remotePlayerRigs).forEach(uid => {
+        const rRig = remotePlayerRigs[uid];
+        const rx = cx + (rRig.group.position.x - playerGroup.position.x) * mapScale;
+        const rz = cy + (rRig.group.position.z - playerGroup.position.z) * mapScale;
+        if (Math.hypot(rx - cx, rz - cy) < cx - 6) {
+          rCtx.fillStyle = '#34D399';
+          rCtx.beginPath(); rCtx.arc(rx, rz, 3.5, 0, Math.PI * 2); rCtx.fill();
+        }
+      });
+
+      rCtx.save();
+      rCtx.translate(cx, cy);
+      rCtx.rotate(-playerGroup.rotation.y);
+      rCtx.fillStyle = '#38BDF8';
+      rCtx.beginPath();
+      rCtx.moveTo(0, -7); rCtx.lineTo(5, 5); rCtx.lineTo(0, 2); rCtx.lineTo(-5, 5);
+      rCtx.closePath(); rCtx.fill();
+      rCtx.restore();
+    }
+
+    const clock = new THREE.Clock();
+    let lastCloudSyncTime = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const time = clock.getElapsedTime();
+
+      updatePlayerParty(delta);
+      updateCamera();
+      checkProximity();
+
+      if (time - lastCloudSyncTime > 0.25) {
+        lastCloudSyncTime = time;
+        if (window.pushMyStateToCloud) {
+          window.pushMyStateToCloud(false);
+        }
+      }
+
+      if (targetMarkerGroup.visible) {
+        targetRing.rotation.z = time * 3;
+        targetCore.position.y = 0.18 + Math.sin(time * 6) * 0.08;
+      }
+
+      animatedCollectibles.forEach((item, idx) => {
+        item.mesh.rotation.y += 2.0 * delta;
+        item.mesh.position.y = item.basePos.y + Math.sin(time * 3 + idx) * 0.25;
+      });
+
+      npcs.forEach((npc, idx) => {
+        npc.exMesh.rotation.y = time * 2;
+        npc.exMesh.position.y = 3.15 + Math.sin(time * 3 + idx) * 0.14;
+      });
+
+      fountainDrops.forEach(d => {
+        d.mesh.position.x += d.velX;
+        d.mesh.position.z += d.velZ;
+        d.mesh.position.y += d.velY;
+        d.velY -= 0.005;
+        if (d.mesh.position.y <= 1.25) {
+          d.mesh.position.set(0, d.startY, 0);
+          d.velY = 0.08 + Math.random() * 0.05;
+        }
+      });
+
+      updateMinimap();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.syncRemotePlayersFromCloud = function(playersDataMap) {
+      onlinePlayersMap = playersDataMap;
+
+      Object.keys(remotePlayerRigs).forEach(uid => {
+        if (!playersDataMap[uid] || uid === gameState.myId) {
+          scene.remove(remotePlayerRigs[uid].group);
+          delete remotePlayerRigs[uid];
+        }
+      });
+
+      const sortedList = getAllRoomPlayersSorted();
+      const topUid = (sortedList.length > 0 && (sortedList[0].score || 0) > 0) ? sortedList[0].uid : null;
+
+      Object.keys(playersDataMap).forEach(uid => {
+        if (uid === gameState.myId) return;
+        const pData = playersDataMap[uid];
+        if (pData.updatedAt && (Date.now() - pData.updatedAt > 45000)) {
+          if (remotePlayerRigs[uid]) {
+            scene.remove(remotePlayerRigs[uid].group);
+            delete remotePlayerRigs[uid];
+          }
+          delete onlinePlayersMap[uid];
+          return;
+        }
+
+        const isRemoteChamp = (uid === topUid);
+
+        if (!remotePlayerRigs[uid]) {
+          const colorInt = parseInt((pData.color || "#3B82F6").replace("#", "0x"), 16) || 0x3B82F6;
+          const newRig = buildCharacterRig(
+            colorInt,
+            0x1E293B,
+            pData.name || "Teman",
+            pData.color || "#3B82F6",
+            pData.level || 1,
+            pData.score || 0
+          );
+          newRig.group.position.set(pData.x || 0, 0, pData.z || 20);
+          newRig.targetPos.set(pData.x || 0, 0, pData.z || 20);
+          newRig.targetRotY = pData.rotY || 0;
+          newRig.lastSignature = "";
+          newRig.lastSpeechTime = pData.speechTimestamp || 0;
+          scene.add(newRig.group);
+          remotePlayerRigs[uid] = newRig;
+          showToast(`👋 ${pData.name || 'Teman baru'} bergabung di Kelas [${gameState.roomCode}]!`, "🌐");
+        } else {
+          const rRig = remotePlayerRigs[uid];
+          rRig.targetPos.set(pData.x || 0, 0, pData.z || 20);
+          rRig.targetRotY = pData.rotY || 0;
+          rRig.mats.shirt.color.setStyle(pData.color || "#3B82F6");
+          if (rRig.footRing) rRig.footRing.material.color.setStyle(pData.color || "#3B82F6");
+
+          const isSpeakingNow = (pData.speechTimestamp && (Date.now() - pData.speechTimestamp < 6500));
+          const bubbleText = isSpeakingNow ? (pData.speechText || "") : "";
+
+          if (pData.speechTimestamp && pData.speechTimestamp > (rRig.lastSpeechTime || 0) && pData.speechText) {
+            rRig.lastSpeechTime = pData.speechTimestamp;
+            appendChatLog(pData.name || "Teman", pData.color || "#38BDF8", pData.speechText, true);
+            playIncomingVoice(pData.name || "Teman", pData.speechText, false);
+          }
+
+          const sig = `${pData.name}_${pData.level}_${pData.score}_${pData.color}_${bubbleText}_${isRemoteChamp}`;
+          if (rRig.lastSignature !== sig) {
+            rRig.lastSignature = sig;
+            const newTex = createNameplateCanvas(
+              pData.name || "Teman",
+              pData.level || 1,
+              pData.score || 0,
+              pData.color || "#3B82F6",
+              bubbleText,
+              isRemoteChamp
+            );
+            if (rRig.npMesh.material.map) rRig.npMesh.material.map.dispose();
+            rRig.npMesh.material.map = newTex;
+            rRig.npMesh.material.needsUpdate = true;
+          }
+        }
+      });
+
+      updatePartyFloatingLabels();
+      updateHUD();
+    };
+
+    window.onload = function () {
+      loadSavedState();
+      updatePartyFloatingLabels();
+      animate();
+    };
+  </script>
+
+  <!-- MODUL SINKRONISASI MULTIPLAYER REAL-TIME (HYBRID: MQTT LIVE RELAY + WEBRTC PEERJS + FIRESTORE + BROADCASTCHANNEL) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDocs, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let unsubscribeRoom = null;
+    let localChannel = null;
+    let mqttClient = null;
+    let currentMqttTopic = null;
+    let peerInstance = null;
+    let hostConnections = [];
+    let clientToHostConn = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    let cloudPlayersCache = {};
+
+    function updateNetBadge(text, color = "#34D399") {
+      const el = document.getElementById('hud-net-status');
+      if (el) {
+        el.innerText = text;
+        el.style.color = color;
+      }
+    }
+
+    if ('BroadcastChannel' in window) {
+      localChannel = new BroadcastChannel('roblox_math_multiplayer');
+      localChannel.onmessage = (ev) => {
+        const data = ev.data;
+        const gs = window.gameState;
+        if (!data || !gs) return;
+        if (data.type === 'ROOM_CODE_CHANGED' && data.officialRoomCode) {
+          applyIncomingOfficialCode(data.officialRoomCode);
+        } else if (gs.playMode === 'team' && data.type === 'PLAYER_STATE' && data.roomCode === gs.roomCode && data.player) {
+          window.mergePlayerIntoRoomMap(data.player);
+        }
+      };
+    }
+
+    function applyIncomingOfficialCode(rawCode) {
+      const newCode = (rawCode || '').toUpperCase().replace(/[^A-Z0-9]/gi, '');
+      if (!newCode) return;
+      const gs = window.gameState;
+      const roomInput = document.getElementById('input-room-code');
+      if (roomInput && gs && !gs.hasJoinedGame && document.activeElement !== roomInput) {
+        roomInput.value = newCode;
+        gs.roomCode = newCode;
+      }
+    }
+
+    function initGlobalMqttRelay() {
+      if (typeof mqtt === 'undefined') return;
+      try {
+        mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+          clientId: 'rc3d_math_' + Math.random().toString(16).substring(2, 10),
+          clean: true,
+          connectTimeout: 4000,
+          reconnectPeriod: 3000
+        });
+
+        mqttClient.on('connect', () => {
+          updateNetBadge("📡 Global Live Sync", "#34D399");
+          mqttClient.subscribe('roblox_cerdas_3d_math/school_official_code');
+          if (window.gameState && window.gameState.hasJoinedGame && window.gameState.playMode === 'team') {
+            subscribeMqttRoom(window.gameState.roomCode);
+          }
+        });
+
+        mqttClient.on('message', (topic, messageBuffer) => {
+          try {
+            const data = JSON.parse(messageBuffer.toString());
+            const gs = window.gameState;
+            if (!data || !gs) return;
+
+            if (topic === 'roblox_cerdas_3d_math/school_official_code' && data.officialRoomCode) {
+              applyIncomingOfficialCode(data.officialRoomCode);
+              return;
+            }
+
+            if (gs.playMode === 'team' && data.roomCode === gs.roomCode) {
+              if (data.type === 'PLAYER_STATE' && data.player) {
+                window.mergePlayerIntoRoomMap(data.player);
+              } else if (data.type === 'WHO_IS_HERE' && data.senderId !== gs.myId) {
+                if (window.pushMyStateToCloud) window.pushMyStateToCloud(true);
+              }
+            }
+          } catch (e) {}
+        });
+      } catch (err) {
+        console.warn("MQTT fallback:", err);
+      }
+    }
+
+    function subscribeMqttRoom(roomCode) {
+      if (!mqttClient || !mqttClient.connected) return;
+      const cleanCode = (roomCode || 'MATEMATIKA1').toUpperCase().replace(/[^A-Z0-9]/gi, '');
+      const newTopic = `roblox_cerdas_3d_math/room_${cleanCode}`;
+      if (currentMqttTopic && currentMqttTopic !== newTopic) {
+        mqttClient.unsubscribe(currentMqttTopic);
+      }
+      currentMqttTopic = newTopic;
+      mqttClient.subscribe(newTopic, () => {
+        mqttClient.publish(newTopic, JSON.stringify({
+          type: 'WHO_IS_HERE',
+          roomCode: cleanCode,
+          senderId: window.gameState ? window.gameState.myId : ''
+        }));
+      });
+    }
+
+    function connectPeerJsRoomMesh(roomCode) {
+      if (typeof Peer === 'undefined') return;
+      const cleanCode = (roomCode || 'MATEMATIKA1').toUpperCase().replace(/[^A-Z0-9]/gi, '');
+      const hostPeerId = `rc3d_math_room_${cleanCode}`;
+
+      if (peerInstance) {
+        try { peerInstance.destroy(); } catch (e) {}
+        peerInstance = null;
+      }
+      hostConnections = [];
+      clientToHostConn = null;
+
+      try {
+        const candidateHost = new Peer(hostPeerId);
+
+        candidateHost.on('open', () => {
+          peerInstance = candidateHost;
+          updateNetBadge("📡 P2P Host + Cloud", "#34D399");
+          candidateHost.on('connection', (conn) => {
+            hostConnections.push(conn);
+            conn.on('open', () => {
+              conn.send({ type: 'ROOM_SNAPSHOT', players: cloudPlayersCache });
+            });
+            conn.on('data', (msg) => {
+              if (msg && msg.type === 'PLAYER_STATE' && msg.player) {
+                window.mergePlayerIntoRoomMap(msg.player);
+                hostConnections.forEach(c => {
+                  if (c !== conn && c.open) {
+                    try { c.send(msg); } catch (e) {}
+                  }
+                });
+              }
+            });
+          });
+        });
+
+        candidateHost.on('error', (err) => {
+          if (err.type === 'unavailable-id') {
+            const clientPeer = new Peer();
+            peerInstance = clientPeer;
+            clientPeer.on('open', () => {
+              const conn = clientPeer.connect(hostPeerId, { reliable: false });
+              clientToHostConn = conn;
+              conn.on('open', () => {
+                updateNetBadge("📡 Terhubung ke Kelas", "#34D399");
+                if (window.pushMyStateToCloud) window.pushMyStateToCloud(true);
+              });
+              conn.on('data', (msg) => {
+                if (!msg) return;
+                if (msg.type === 'ROOM_SNAPSHOT' && msg.players) {
+                  Object.values(msg.players).forEach(p => window.mergePlayerIntoRoomMap(p));
+                } else if (msg.type === 'PLAYER_STATE' && msg.player) {
+                  window.mergePlayerIntoRoomMap(msg.player);
+                }
+              });
+            });
+          }
+        });
+      } catch (e) {}
+    }
+
+    window.mergePlayerIntoRoomMap = function(playerObj) {
+      const gs = window.gameState;
+      if (!gs || gs.playMode === 'personal') return;
+      if (!playerObj || !playerObj.uid) return;
+      playerObj.updatedAt = Date.now();
+      cloudPlayersCache[playerObj.uid] = playerObj;
+      if (window.syncRemotePlayersFromCloud) {
+        window.syncRemotePlayersFromCloud({ ...cloudPlayersCache });
+      }
+    };
+
+    window.disconnectCloudRoom = function() {
+      if (unsubscribeRoom) {
+        unsubscribeRoom();
+        unsubscribeRoom = null;
+      }
+      if (currentMqttTopic && mqttClient && mqttClient.connected) {
+        mqttClient.unsubscribe(currentMqttTopic);
+        currentMqttTopic = null;
+      }
+      if (peerInstance) {
+        try { peerInstance.destroy(); } catch (e) {}
+        peerInstance = null;
+      }
+      cloudPlayersCache = {};
+    };
+
+    async function initMultiplayerCloud() {
+      initGlobalMqttRelay();
+      try {
+        if (typeof __firebase_config === 'undefined' || !__firebase_config) return;
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            currentUser = user;
+            if (window.gameState) {
+              listenOfficialRoomConfig();
+              if (window.gameState.hasJoinedGame && window.gameState.playMode === 'team') {
+                window.connectToCloudRoom(window.gameState.roomCode);
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("Menggunakan Jalur Sinkronisasi MQTT & WebRTC:", err);
+      }
+    }
+
+    function listenOfficialRoomConfig() {
+      if (!db || !currentUser) return;
+      const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_settings', 'active_room_math');
+      onSnapshot(configDocRef, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data && data.officialRoomCode) {
+            applyIncomingOfficialCode(data.officialRoomCode);
+          }
+        }
+      }, () => {});
+    }
+
+    window.publishOfficialRoomCode = async function(newRoomCode) {
+      const cleanCode = newRoomCode.toUpperCase().replace(/[^A-Z0-9]/gi, '');
+      if (localChannel) {
+        localChannel.postMessage({ type: 'ROOM_CODE_CHANGED', officialRoomCode: cleanCode });
+      }
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('roblox_cerdas_3d_math/school_official_code', JSON.stringify({
+          officialRoomCode: cleanCode,
+          updatedAt: Date.now()
+        }), { retain: true });
+      }
+      if (!db || !currentUser) return;
+      try {
+        const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_settings', 'active_room_math');
+        await setDoc(configDocRef, {
+          officialRoomCode: cleanCode,
+          updatedBy: window.gameState ? window.gameState.myId : currentUser.uid,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (e) {}
+    };
+
+    let lastSentPos = { x: 999, z: 999, score: -1, speechTimestamp: 0, roomCode: "" };
+
+    window.pushMyStateToCloud = async function(force = false) {
+      const gs = window.gameState;
+      const pg = window.playerGroup;
+      if (!gs || !gs.hasJoinedGame || gs.playMode === 'personal' || !gs.roomCode || !pg) return;
+
+      const cleanCode = gs.roomCode.toUpperCase().replace(/[^A-Z0-9]/gi, '') || 'MATEMATIKA1';
+      const px = Math.round(pg.position.x * 10) / 10;
+      const pz = Math.round(pg.position.z * 10) / 10;
+      const prot = Math.round(pg.rotation.y * 100) / 100;
+
+      const moved = Math.hypot(px - lastSentPos.x, pz - lastSentPos.z) > 0.25;
+      const scoreChanged = gs.myScore !== lastSentPos.score;
+      const speechChanged = gs.speechTimestamp !== lastSentPos.speechTimestamp;
+      const roomChanged = cleanCode !== lastSentPos.roomCode;
+
+      if (!force && !moved && !scoreChanged && !speechChanged && !roomChanged) return;
+
+      lastSentPos = { x: px, z: pz, score: gs.myScore, speechTimestamp: gs.speechTimestamp, roomCode: cleanCode };
+
+      const payload = {
+        uid: gs.myId,
+        roomCode: cleanCode,
+        name: gs.myName,
+        color: gs.myColor,
+        score: gs.myScore,
+        level: gs.myLevel,
+        x: px,
+        z: pz,
+        rotY: prot,
+        speechText: gs.speechText || "",
+        speechTimestamp: gs.speechTimestamp || 0,
+        updatedAt: Date.now()
+      };
+
+      const packet = { type: 'PLAYER_STATE', roomCode: cleanCode, player: payload };
+
+      if (localChannel) {
+        localChannel.postMessage(packet);
+      }
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish(`roblox_cerdas_3d_math/room_${cleanCode}`, JSON.stringify(packet));
+      }
+
+      if (clientToHostConn && clientToHostConn.open) {
+        try { clientToHostConn.send(packet); } catch (e) {}
+      }
+      if (hostConnections.length > 0) {
+        hostConnections.forEach(c => {
+          if (c.open) {
+            try { c.send(packet); } catch (e) {}
+          }
+        });
+      }
+
+      if (!db || !currentUser) return;
+      try {
+        const colName = `math_room_${cleanCode}`;
+        const playerDocRef = doc(db, 'artifacts', appId, 'public', 'data', colName, gs.myId);
+        await setDoc(playerDocRef, payload, { merge: true });
+      } catch (e) {}
+    };
+
+    window.connectToCloudRoom = async function(roomCode) {
+      const gs = window.gameState;
+      if (!gs || gs.playMode === 'personal') return;
+
+      const cleanCode = (roomCode || 'MATEMATIKA1').toUpperCase().replace(/[^A-Z0-9]/gi, '');
+      gs.roomCode = cleanCode;
+      cloudPlayersCache = {};
+      if (window.syncRemotePlayersFromCloud) {
+        window.syncRemotePlayersFromCloud({});
+      }
+
+      subscribeMqttRoom(cleanCode);
+      connectPeerJsRoomMesh(cleanCode);
+
+      await window.pushMyStateToCloud(true);
+
+      if (!db || !currentUser) return;
+      if (unsubscribeRoom) unsubscribeRoom();
+
+      const colName = `math_room_${cleanCode}`;
+      const roomColRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+
+      try {
+        const initialSnap = await getDocs(roomColRef);
+        initialSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && d.uid) cloudPlayersCache[d.uid] = d;
+        });
+        if (window.syncRemotePlayersFromCloud) {
+          window.syncRemotePlayersFromCloud({ ...cloudPlayersCache });
+        }
+      } catch (e) {}
+
+      unsubscribeRoom = onSnapshot(roomColRef, (snapshot) => {
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.uid) {
+            cloudPlayersCache[data.uid] = data;
+          }
+        });
+        if (window.syncRemotePlayersFromCloud) {
+          window.syncRemotePlayersFromCloud({ ...cloudPlayersCache });
+        }
+      }, () => {});
+    };
+
+    setInterval(() => {
+      if (window.gameState && window.gameState.hasJoinedGame && window.gameState.playMode === 'team' && window.pushMyStateToCloud) {
+        window.pushMyStateToCloud(true);
+      }
+    }, 2000);
+
+    initMultiplayerCloud();
+  </script>
+</body>
+</html>
